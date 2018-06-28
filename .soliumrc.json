@@ -1,0 +1,79 @@
+{
+  "extends": "solium:recommended",
+    "plugins": ["security"],
+  "rules": {
+    "imports-on-top": 1,
+    "variable-declarations": 1,
+    "array-declarations": 1,
+    "lbrace": 0,
+    "uppercase": 1,
+    "camelcase": 1,
+    "operator-whitespace": 0,
+    "conditionals-whitespace": 1,
+    "comma-whitespace": 1,
+    "whitespace": 1,
+    "no-empty-blocks": 1,
+    "no-unused-vars": 1,
+    "pragma-on-top": 1,
+    "function-order": 1,
+    "indentation": ["error", 4],
+    "quotes": ["error", "double"],
+
+    "security/no-low-level-calls": ["error", ["call", "delegatecall"]],
+    "security/no-throw": 1,
+    "security/no-tx-origin": 1,
+    "security/enforce-explicit-visibility": 1,
+    "security/no-block-members": 0,
+    "security/no-call-value": 1,
+    "security/no-assign-params": 1,
+    "security/no-fixed": 1,
+    "security/no-inline-assembly": 1,
+    "security/no-low-level-calls": 1,
+    "security/no-modify-for-iter-var": 1,
+    "security/no-send": 1,
+    "security/no-sha3": 1,
+    "security/no-unreachable-code": 1,
+
+    "security/else-after-elseif": 0,
+    "security/enforce-loop-bounds": 1,
+    "security/enforce-placeholder-last": 0,
+    "security/return-at-end": 0,
+    "security/one-break-per-loop": 1,
+    "security/max-statements-in-func": 0,
+    "security/no-abstract-func": 0,
+    "security/no-bit-operations": 0,
+    "security/no-continue": 0,
+    "security/no-inheritance": 0,
+    "security/no-multiple-inheritance": 0,
+    "security/no-named-params": 0,
+    "security/no-named-returns": 0,
+    "security/256-bit-ints-only": 0,
+    "security/no-suicide-or-selfdestruct": 1,
+    "security/no-var": 1,
+    "security/no-user-defined-modifiers": 0,
+    "security/no-void-returns": 0,
+    "security/no-func-overriding": 1,
+
+     "zeppelin/constant-candidates": [
+      "warning"
+      ],
+      "zeppelin/highlight-comments": [
+        "warning"
+      ],
+      "zeppelin/missing-natspec-comments": [
+        0
+      ],
+      "zeppelin/no-arithmetic-operations": [
+        "warning"
+      ],
+      "zeppelin/no-state-variable-shadowing": [
+        "warning"
+      ],
+      "zeppelin/no-unchecked-send": [
+        "warning"
+      ],
+      "zeppelin/no-unused-imports": [
+        "warning"
+      ]
+  }
+}
