@@ -36,7 +36,7 @@ contract ERC1155 {
 
         items[_itemId].balances[msg.sender] = items[_itemId].balances[msg.sender].sub(_value);
         items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
-        Transfer(msg.sender, _to, _itemId, _value);
+        emit Transfer(msg.sender, _to, _itemId, _value);
     }
 
     function transferFrom(address _from, address _to, uint256 _itemId, uint256 _value) external {
@@ -50,7 +50,7 @@ contract ERC1155 {
         items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
         items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-        Transfer(_from, _to, _itemId, _value);
+        emit Transfer(_from, _to, _itemId, _value);
     }
 
     function batchTransfer(address _to, uint256[] _itemIds, uint256[] _values) external {
@@ -66,7 +66,7 @@ contract ERC1155 {
             items[_itemId].balances[msg.sender] = items[_itemId].balances[msg.sender].sub(_value);
             items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-            Transfer(msg.sender, _to, _itemId, _value);
+            emit Transfer(msg.sender, _to, _itemId, _value);
         }
     }
 
@@ -84,7 +84,7 @@ contract ERC1155 {
                 items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
                 items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-                Transfer(_from, _to, _itemId, _value);
+                emit Transfer(_from, _to, _itemId, _value);
             }
         }
         else {
@@ -96,7 +96,7 @@ contract ERC1155 {
                 allowances[_itemId][_from][msg.sender] = allowances[_itemId][_from][msg.sender].sub(_value);
                 items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
                 items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
-                Transfer(_from, _to, _itemId, _value);
+                emit Transfer(_from, _to, _itemId, _value);
             }
         }
     }
@@ -114,7 +114,7 @@ contract ERC1155 {
 
             require(_value == 0 || allowances[_itemId][msg.sender][_spender] == 0);
             allowances[_itemId][msg.sender][_spender] = _value;
-            Approval(msg.sender, _spender, _itemId, _value);
+            emit Approval(msg.sender, _spender, _itemId, _value);
         }
     }
 
@@ -129,7 +129,7 @@ contract ERC1155 {
             _spender = _spenders[i];
 
             allowances[_itemId][msg.sender][_spender] = _addedValue.add(allowances[_itemId][msg.sender][_spender]);
-            Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
+            emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
         }
     }
 
@@ -148,7 +148,7 @@ contract ERC1155 {
             } else {
                 allowances[_itemId][msg.sender][_spender] = oldValue.sub(_subtractedValue);
             }
-            Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
+            emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
         }
     }
 
