@@ -20,8 +20,10 @@ contract ERC1155 {
     mapping (uint256 => string) metadataURIs;
 
     // Events
-    event Transfer(address indexed _from, address indexed _to, uint256[] indexed _itemIds, uint256[] _values);
-    event Approval(address indexed _owner, address indexed _spender, uint256[] indexed _itemIds, uint256[] _values);
+    //event Transfer(address indexed _from, address indexed _to, uint256[] indexed _itemIds, uint256[] _values);
+    //event Approval(address indexed _owner, address indexed _spender, uint256[] indexed _itemIds, uint256[] _values);
+    event Approval(address indexed _owner, address indexed _spender, uint256 indexed _itemId, uint256 _value);
+    event Transfer(address indexed _from, address indexed _to, uint256 indexed _itemId, uint256 _value);
 
     // TEMP CONSTRUCTOR - Testing purposes
     /**
@@ -58,11 +60,7 @@ contract ERC1155 {
         items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
         items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-        uint256[] memory i;
-        i[0] = _itemId;
-        uint256[] memory v;
-        v[0] = _value;
-        Transfer(_from, _to, i, v);
+        Transfer(_from, _to, _itemId, _value);
     }
 
     function batchTransfer(address _to, uint256[] _itemIds, uint256[] _values) external {
@@ -73,8 +71,8 @@ contract ERC1155 {
             _value = _values[i];
             items[_itemId].balances[msg.sender] = items[_itemId].balances[msg.sender].sub(_value);
             items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
+            Transfer(msg.sender, _to, _itemId, _value);
         }
-        Transfer(msg.sender, _to, _itemIds, _values);
     }
 
     function batchTransferFrom(address _from, address _to, uint256[] _itemIds, uint256[] _values) external {
@@ -87,6 +85,7 @@ contract ERC1155 {
                 _value = _values[i];
                 items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
                 items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
+                Transfer(_from, _to, _itemId, _value);
             }
         }
         else {
@@ -98,19 +97,61 @@ contract ERC1155 {
                 allowances[_itemId][_from][msg.sender] = allowances[_itemId][_from][msg.sender].sub(_value);
                 items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
                 items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
+                Transfer(_from, _to, _itemId, _value);
             }
         }
-        Transfer(msg.sender, _to, _itemIds, _values);
     }
 
-    function approve(address[] _spenders, uint256[] _itemIds, uint256[] _value) external returns (bool success) {
+    function approve(address[] _spenders, uint256[] _itemIds, uint256[] _values) external  {
+        uint256 _itemId;
+        uint256 _value;
+        address _spender;
 
+        // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
+        for (uint256 i = 0; i < _itemIds.length; ++i) {
+            _itemId = _itemIds[i];
+            _value = _values[i];
+            _spender = _spenders[i];
+
+            require(_value == 0 || allowances[_itemId][msg.sender][_spender] == 0);
+            allowances[_itemId][msg.sender][_spender] = _value;
+            Approval(msg.sender, _spender, _itemId, _value);
+        }
     }
-    function increaseApproval(address[] _spenders, uint256[] _itemIds, uint256[] _addedValue) external returns (bool success) {
 
+    function increaseApproval(address[] _spenders, uint256[] _itemIds, uint256[] _addedValues) external {
+        uint256 _itemId;
+        uint256 _addedValue;
+        address _spender;
+
+        // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
+        for (uint256 i = 0; i < _itemIds.length; ++i) {
+            _itemId = _itemIds[i];
+            _addedValue = _addedValues[i];
+            _spender = _spenders[i];
+
+            allowances[_itemId][msg.sender][_spender] = _addedValue.add(allowances[_itemId][msg.sender][_spender]);
+            Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
+        }
     }
-    function decreaseApproval(address[] _spenders, uint256[] _itemIds, uint256[] _subtractedValue) external returns (bool success) {
 
+    function decreaseApproval(address[] _spenders, uint256[] _itemIds, uint256[] _subtractedValues) external {
+        uint256 _itemId;
+        uint256 _subtractedValue;
+        address _spender;
+
+        for (uint256 i = 0; i < _itemIds.length; ++i) {
+            _itemId = _itemIds[i];
+            _subtractedValue = _subtractedValues[i];
+            _spender = _spenders[i];
+            uint256 oldValue = allowances[_itemId][msg.sender][_spender];
+            if (_subtractedValue > oldValue) {
+                allowances[_itemId][msg.sender][_spender] = 0;
+            } else {
+                allowances[_itemId][msg.sender][_spender] = oldValue.sub(_subtractedValue);
+            }
+            Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
+        }
     }
 
     // Required View Functions
