@@ -124,7 +124,6 @@ contract ERC1155 {
         uint256 _addedValue;
         address _spender;
 
-        // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
         for (uint256 i = 0; i < _itemIds.length; ++i) {
             _itemId = _itemIds[i];
             _addedValue = _addedValues[i];
