@@ -17,7 +17,7 @@ contract ERC1155NonFungible is ERC1155 {
         return nfiOwners[_itemId];
     }
 
-    function itemByIndex(uint256 _itemId, uint256 _index) external view returns (uint256) {
+    function itemByIndex(uint256 _itemId, uint128 _index) external view returns (uint256) {
         // can't call this on a non-fungible item directly, only its underlying itemId
         require(_itemId > 0 && _itemId & NONFUNGIBLE_IDX_MASK == 0, "base");
 
@@ -28,7 +28,7 @@ contract ERC1155NonFungible is ERC1155 {
 
         return nfiId;
     }
-    function itemOfOwnerByIndex(uint256 _itemId, address _owner, uint256 _index) external view returns (uint256) {
+    function itemOfOwnerByIndex(uint256 _itemId, address _owner, uint128 _index) external view returns (uint256) {
         // can't call this on a non-fungible item directly, only its underlying itemId
         require(_itemId > 0 && _itemId & NONFUNGIBLE_IDX_MASK == 0, "base");
         require(isNonFungible[_itemId & ID_MASK]), "non-fungible");

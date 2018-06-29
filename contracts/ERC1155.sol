@@ -1,8 +1,9 @@
 pragma solidity ^0.4.24;
 
 import "./SafeMath.sol";
+import "./IERC1155.sol";
 
-contract ERC1155 {
+contract ERC1155 is IERC1155 {
     using SafeMath for uint256;
 
     // Variables
@@ -101,16 +102,20 @@ contract ERC1155 {
         }
     }
 
-    function approve(address[] _spenders, uint256[] _itemIds, uint256[] _values) external  {
+    function approve(address _spender, uint256 _itemId, uint256 _value) external {
+        // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
+        require(_value == 0 || allowances[_itemId][msg.sender][_spender] == 0);
+        allowances[_itemId][msg.sender][_spender] = _value;
+        emit Approval(msg.sender, _spender, _itemId, _value);
+    }
+
+    function batchApprove(address _spender, uint256[] _itemIds,  uint256[] _values) external {
         uint256 _itemId;
         uint256 _value;
-        address _spender;
 
-        // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
         for (uint256 i = 0; i < _itemIds.length; ++i) {
             _itemId = _itemIds[i];
             _value = _values[i];
-            _spender = _spenders[i];
 
             require(_value == 0 || allowances[_itemId][msg.sender][_spender] == 0);
             allowances[_itemId][msg.sender][_spender] = _value;
@@ -118,30 +123,42 @@ contract ERC1155 {
         }
     }
 
-    function increaseApproval(address[] _spenders, uint256[] _itemIds, uint256[] _addedValues) external {
+    function increaseApproval(address _spender, uint256 _itemId,  uint256 _addedValue) external {
+        allowances[_itemId][msg.sender][_spender] = _addedValue.add(allowances[_itemId][msg.sender][_spender]);
+        emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
+    }
+
+    function batchIncreaseApproval(address _spender, uint256[] _itemIds,  uint256[] _addedValues) external {
         uint256 _itemId;
         uint256 _addedValue;
-        address _spender;
 
         for (uint256 i = 0; i < _itemIds.length; ++i) {
             _itemId = _itemIds[i];
             _addedValue = _addedValues[i];
-            _spender = _spenders[i];
 
             allowances[_itemId][msg.sender][_spender] = _addedValue.add(allowances[_itemId][msg.sender][_spender]);
             emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
         }
     }
 
-    function decreaseApproval(address[] _spenders, uint256[] _itemIds, uint256[] _subtractedValues) external {
+    function decreaseApproval(address _spender, uint256 _itemId,  uint256 _subtractedValue) external {
+        uint256 oldValue = allowances[_itemId][msg.sender][_spender];
+        if (_subtractedValue > oldValue) {
+            allowances[_itemId][msg.sender][_spender] = 0;
+        } else {
+            allowances[_itemId][msg.sender][_spender] = oldValue.sub(_subtractedValue);
+        }
+        emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
+    }
+
+    function batchDecreaseApproval(address _spender, uint256[] _itemIds,  uint256[] _subtractedValues) external {
         uint256 _itemId;
         uint256 _subtractedValue;
-        address _spender;
 
         for (uint256 i = 0; i < _itemIds.length; ++i) {
             _itemId = _itemIds[i];
             _subtractedValue = _subtractedValues[i];
-            _spender = _spenders[i];
+
             uint256 oldValue = allowances[_itemId][msg.sender][_spender];
             if (_subtractedValue > oldValue) {
                 allowances[_itemId][msg.sender][_spender] = 0;
