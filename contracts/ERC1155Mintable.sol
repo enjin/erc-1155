@@ -11,7 +11,7 @@ contract ERC1155Mintable is ERC1155 {
     uint256 nonce;
 
     modifier minterOnly(uint256 _itemId) {
-        require(minters(_itemId) == msg.sender);
+        require(minters[_itemId] == msg.sender);
         _;
     }
 
@@ -32,10 +32,10 @@ contract ERC1155Mintable is ERC1155 {
         symbols[_itemId] = _symbol;
 
         // Grant the items to the minter
-        balances[_itemId][msg.sender] = totalSupply;
+        items[_itemId].balances[msg.sender] = _totalSupply;
     }
 
-    function updateURI(uint256 _itemId, string _uri) minterOnly(_itemId) {
+    function updateURI(uint256 _itemId, string _uri) external minterOnly(_itemId) {
         metadataURIs[_itemId] = _uri;
     }
 }

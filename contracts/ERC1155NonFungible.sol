@@ -70,8 +70,8 @@ contract ERC1155NonFungible is ERC1155 {
 
             if (_itemId & NFI_BIT != 0) {
                 uint256 _nfiType = _itemId & TYPE_MASK;
-                require(ownerOf[_itemId] == msg.sender);
-                ownerOf[_itemId] = _to;
+                require(nfiOwners[_itemId] == msg.sender);
+                nfiOwners[_itemId] = _to;
                 items[_nfiType].balances[msg.sender] = items[_nfiType].balances[msg.sender].sub(1);
                 items[_nfiType].balances[_to] = items[_nfiType].balances[_to].add(1);
             } else {
@@ -95,8 +95,8 @@ contract ERC1155NonFungible is ERC1155 {
             if (_itemId & NFI_BIT != 0) {
                 require(_value == 1);
                 uint256 _nfiType = _itemId & TYPE_MASK;
-                require(ownerOf[_itemId] == _from);
-                ownerOf[_itemId] = _to;
+                require(nfiOwners[_itemId] == _from);
+                nfiOwners[_itemId] = _to;
                 items[_nfiType].balances[_from] = items[_nfiType].balances[_from].sub(1);
                 items[_nfiType].balances[_to] = items[_nfiType].balances[_to].add(1);
             } else {
