@@ -14,7 +14,7 @@ contract ERC1155 is IERC1155 {
         mapping (address => uint256) balances;
     }
     mapping (uint256 => uint8) public decimals;
-    mapping (uint256 => string) public symbol;
+    mapping (uint256 => string) public symbols;
     mapping (uint256 => mapping(address => mapping(address => uint256))) allowances;
     mapping (uint256 => Items) public items;
     mapping (uint256 => string) metadataURIs;
@@ -238,11 +238,11 @@ contract ERC1155 is IERC1155 {
     }
 
     function symbol(uint256 _itemId) external view returns (string) {
-        return items[_itemId].symbol;
+        return symbols[_itemId];
     }
 
     function decimals(uint256 _itemId) external view returns (uint8) {
-        return items[_itemId].decimals;
+        return decimals[_itemId];
     }
 
     function totalSupply(uint256 _itemId) external view returns (uint256) {
