@@ -24,7 +24,7 @@ contract ERC1155NonFungible is ERC1155 {
     // retrieves an nfi itemId for _nfiType with a 1 based index.
     function itemByIndex(uint256 _nfiType, uint128 _index) external view returns (uint256) {
         // Needs to be a valid NFI type, not an actual NFI item
-        require(_nfiType & TYPE_MASK == 0 && _nfiType & NFI_BIT  != 0);
+        require(_nfiType & NFI_INDEX_MASK == 0 && _nfiType & NFI_BIT != 0);
         require(uint256(_index) <= items[_nfiType].totalSupply);
 
         uint256 nfiId = _nfiType | uint256(_index);
@@ -35,7 +35,7 @@ contract ERC1155NonFungible is ERC1155 {
     // Allows enumeration of items owned by a specific owner
     function itemOfOwnerByIndex(uint256 _nfiType, address _owner, uint128 _index) external view returns (uint256) {
         // can't call this on a non-fungible item directly, only its underlying itemId
-        require(_nfiType & TYPE_MASK == 0 && _nfiType & NFI_BIT  != 0);
+        require(_nfiType & NFI_INDEX_MASK == 0 && _nfiType & NFI_BIT != 0);
         require(_index < items[_nfiType].balances[_owner]);
 
         uint256 _numToSkip = _index;
