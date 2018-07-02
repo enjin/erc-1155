@@ -3,19 +3,43 @@ pragma solidity ^0.4.24;
 import "./ERC1155.sol";
 
 /**
-    @dev Extension to ERC1155 for Non-Fungible Items support
+    @dev Extension to ERC1155 for Mixed Fungible and Non-Fungible Items support
     Work-in-progress
 */
 contract ERC1155NonFungible is ERC1155 {
 
     // Use a split bit implementation.
-    // Store the metaid in the upper 128 bits..
+    // Store the type in the upper 128 bits..
     uint256 constant TYPE_MASK = uint256(uint128(~0)) << 128;
-    // ..and the index in the lower 128
-    uint256 constant NFI_INDEX_MASK = uint128(~0);
-    uint256 constant NFI_BIT = 1 << 255;
+    // ..and the non-fungible index in the lower 128
+    uint256 constant NF_INDEX_MASK = uint128(~0);
+
+    // The top bit is a flag to tell if this is a NFI.
+    uint256 constant TYPE_NF_BIT = 1 << 255;
 
     mapping (uint256 => address) nfiOwners;
+
+    // Only to make code clearer. Should not be functions
+    function isNonFungible(uint256 _itemId) public pure returns(bool) {
+        return _itemId & TYPE_NF_BIT == TYPE_NF_BIT;
+    }
+    function isFungible(uint256 _itemId) public pure returns(bool) {
+        return _itemId & TYPE_NF_BIT == 0;
+    }
+    function getNonFungibleIndex(uint256 _itemId) public pure returns(uint256) {
+        return _itemId & NF_INDEX_MASK;
+    }
+    function getNonFungibleBaseType(uint256 _itemId) public pure returns(uint256) {
+        return _itemId & TYPE_MASK;
+    }
+    function isNonFungibleBaseType(uint256 _itemId) public pure returns(bool) {
+        // A base type has the NF bit but does not have an index.
+        return (_itemId & TYPE_NF_BIT == TYPE_NF_BIT) && (_itemId & NF_INDEX_MASK == 0);
+    }
+    function isNonFungibleItem(uint256 _itemId) public pure returns(bool) {
+        // A base type has the NF bit but does not have an index.
+        return (_itemId & TYPE_NF_BIT == TYPE_NF_BIT) && (_itemId & NF_INDEX_MASK != 0);
+    }
 
     function ownerOf(uint256 _itemId) public view returns (address) {
         return nfiOwners[_itemId];
@@ -24,7 +48,7 @@ contract ERC1155NonFungible is ERC1155 {
     // retrieves an nfi itemId for _nfiType with a 1 based index.
     function itemByIndex(uint256 _nfiType, uint128 _index) external view returns (uint256) {
         // Needs to be a valid NFI type, not an actual NFI item
-        require(_nfiType & NFI_INDEX_MASK == 0 && _nfiType & NFI_BIT != 0);
+        require(isNonFungibleBaseType(_nfiType));
         require(uint256(_index) <= items[_nfiType].totalSupply);
 
         uint256 nfiId = _nfiType | uint256(_index);
@@ -33,9 +57,10 @@ contract ERC1155NonFungible is ERC1155 {
     }
 
     // Allows enumeration of items owned by a specific owner
+    // _index is from 0 to balanceOf(_nfiType, _owner) - 1
     function itemOfOwnerByIndex(uint256 _nfiType, address _owner, uint128 _index) external view returns (uint256) {
         // can't call this on a non-fungible item directly, only its underlying itemId
-        require(_nfiType & NFI_INDEX_MASK == 0 && _nfiType & NFI_BIT != 0);
+        require(isNonFungibleBaseType(_nfiType));
         require(_index < items[_nfiType].balances[_owner]);
 
         uint256 _numToSkip = _index;
@@ -66,18 +91,17 @@ contract ERC1155NonFungible is ERC1155 {
 
         for (uint256 i = 0; i < _itemIds.length; ++i) {
             _itemId = _itemIds[i];
-            _value = _values[i];
+            _value  = _values[i];
 
-            if (_itemId & NFI_BIT != 0) {
-                uint256 _nfiType = _itemId & TYPE_MASK;
+            if (isNonFungible(_itemId)) {
+                require(_value == 1);
                 require(nfiOwners[_itemId] == msg.sender);
                 nfiOwners[_itemId] = _to;
-                items[_nfiType].balances[msg.sender] = items[_nfiType].balances[msg.sender].sub(1);
-                items[_nfiType].balances[_to] = items[_nfiType].balances[_to].add(1);
-            } else {
-                items[_itemId].balances[msg.sender] = items[_itemId].balances[msg.sender].sub(_value);
-                items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
             }
+
+            uint256 _type = _itemId & TYPE_MASK;
+            items[_type].balances[msg.sender] = items[_type].balances[msg.sender].sub(_value);
+            items[_type].balances[_to] = _value.add(items[_type].balances[_to]);
 
             emit Transfer(msg.sender, _to, _itemId, _value);
         }
@@ -90,30 +114,42 @@ contract ERC1155NonFungible is ERC1155 {
 
         for (uint256 i = 0; i < _itemIds.length; ++i) {
             _itemId = _itemIds[i];
-            _value = _values[i];
+            _value  = _values[i];
 
-            if (_itemId & NFI_BIT != 0) {
+            if (isNonFungible(_itemId)) {
                 require(_value == 1);
-                uint256 _nfiType = _itemId & TYPE_MASK;
                 require(nfiOwners[_itemId] == _from);
                 nfiOwners[_itemId] = _to;
-                items[_nfiType].balances[_from] = items[_nfiType].balances[_from].sub(1);
-                items[_nfiType].balances[_to] = items[_nfiType].balances[_to].add(1);
-            } else {
-                items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
-                items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
             }
 
             if (_from != msg.sender) {
                 allowances[_itemId][_from][msg.sender] = allowances[_itemId][_from][msg.sender].sub(_value);
             }
 
+            uint256 _type = _itemId & TYPE_MASK;
+            items[_type].balances[_from] = items[_type].balances[_from].sub(_value);
+            items[_type].balances[_to] = _value.add(items[_type].balances[_to]);
+
             emit Transfer(_from, _to, _itemId, _value);
         }
     }
 
     function balanceOf(uint256 _itemId, address _owner) external view returns (uint256) {
+        if (isNonFungibleItem(_itemId))
+            return ownerOf(_itemId) == _owner ? 1 : 0;
         uint256 _type = _itemId & TYPE_MASK;
         return items[_type].balances[_owner];
     }
+
+    function totalSupply(uint256 _itemId) external view returns (uint256) {
+        // return 1 for a specific nfi, totalSupply otherwise.
+        if (isNonFungibleItem(_itemId)) {
+            // Make sure this is a valid index for the type.
+            require(getNonFungibleIndex(_itemId) <= items[_itemId & TYPE_MASK].totalSupply);
+            return 1;
+        } else {
+            return items[_itemId].totalSupply;
+        }
+    }
+
 }
