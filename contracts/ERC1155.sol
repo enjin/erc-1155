@@ -19,10 +19,9 @@ contract ERC1155 is IERC1155 {
     mapping (uint256 => Items) public items;
     mapping (uint256 => string) metadataURIs;
 
-
     // Events
-    event Approval(address indexed _owner, address indexed _spender, uint256 indexed _itemId, uint256 _value);
-    event Transfer(address indexed _from, address indexed _to, uint256 indexed _itemId, uint256 _value);
+    event Approval(address indexed _owner, address indexed _spender, uint256 indexed _itemId, uint256 _oldValue, uint256 _value);
+    event Transfer(address _spender, address indexed _from, address indexed _to, uint256 indexed _itemId, uint256 _value);
 
     // TEMP CONSTRUCTOR - Testing purposes
     constructor() public {
@@ -42,7 +41,7 @@ contract ERC1155 is IERC1155 {
             items[_itemId].balances[msg.sender] = items[_itemId].balances[msg.sender].sub(_value);
             items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-            emit Transfer(msg.sender, _to, _itemId, _value);
+            emit Transfer(msg.sender, msg.sender, _to, _itemId, _value);
         }
     }
 
@@ -59,7 +58,7 @@ contract ERC1155 is IERC1155 {
                 items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
                 items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-                emit Transfer(_from, _to, _itemId, _value);
+                emit Transfer(msg.sender, _from, _to, _itemId, _value);
             }
         }
         else {
@@ -72,12 +71,12 @@ contract ERC1155 is IERC1155 {
                 items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
                 items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-                emit Transfer(_from, _to, _itemId, _value);
+                emit Transfer(msg.sender, _from, _to, _itemId, _value);
             }
         }
     }
 
-    function approve(address _spender, uint256[] _itemIds,  uint256[] _values) external {
+    function approve(address _spender, uint256[] _itemIds,  uint256[] _currentValues, uint256[] _values) external {
         uint256 _itemId;
         uint256 _value;
 
@@ -85,70 +84,11 @@ contract ERC1155 is IERC1155 {
             _itemId = _itemIds[i];
             _value = _values[i];
 
-            require(_value == 0 || allowances[_itemId][msg.sender][_spender] == 0);
+            require(_value == 0 || allowances[_itemId][msg.sender][_spender] == _currentValues[i]);
             allowances[_itemId][msg.sender][_spender] = _value;
-            emit Approval(msg.sender, _spender, _itemId, _value);
+            emit Approval(msg.sender, _spender, _itemId, _currentValues[i], _value);
         }
     }
-
-    function increaseApproval(address _spender, uint256[] _itemIds,  uint256[] _addedValues) external {
-        uint256 _itemId;
-        uint256 _addedValue;
-
-        for (uint256 i = 0; i < _itemIds.length; ++i) {
-            _itemId = _itemIds[i];
-            _addedValue = _addedValues[i];
-
-            allowances[_itemId][msg.sender][_spender] = _addedValue.add(allowances[_itemId][msg.sender][_spender]);
-            emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
-        }
-    }
-
-    function decreaseApproval(address _spender, uint256[] _itemIds,  uint256[] _subtractedValues) external {
-        uint256 _itemId;
-        uint256 _subtractedValue;
-
-        for (uint256 i = 0; i < _itemIds.length; ++i) {
-            _itemId = _itemIds[i];
-            _subtractedValue = _subtractedValues[i];
-
-            uint256 oldValue = allowances[_itemId][msg.sender][_spender];
-            if (_subtractedValue > oldValue) {
-                allowances[_itemId][msg.sender][_spender] = 0;
-            } else {
-                allowances[_itemId][msg.sender][_spender] = oldValue.sub(_subtractedValue);
-            }
-            emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
-        }
-    }
-
-    // Consider this to replace increase/decreaseApproval
-    function changeApproval(address _spender, uint256[] _itemIds,  int256[] _deltaValues) external {
-        uint256 _itemId;
-        int256  _deltaValue;
-        uint256 _oldValue;
-        uint256 _absDelta;
-
-        for (uint256 i = 0; i < _itemIds.length; ++i) {
-            _itemId = _itemIds[i];
-            _deltaValue = _deltaValues[i];
-            _oldValue = allowances[_itemId][msg.sender][_spender];
-
-            if (_deltaValue >= 0) {
-                _absDelta = uint256(_deltaValue);
-                allowances[_itemId][msg.sender][_spender] = _oldValue.add(_absDelta);
-            } else {
-                _absDelta = uint256(-_deltaValue);
-                if (_absDelta > _oldValue) {
-                    allowances[_itemId][msg.sender][_spender] = 0;
-                } else {
-                    allowances[_itemId][msg.sender][_spender] = _oldValue.sub(_absDelta);
-                }
-            }
-            emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
-        }
-    }
-
 
     // Optional Single Item Functions
     function transferSingle(address _to, uint256 _itemId, uint256 _value) external {
@@ -156,7 +96,7 @@ contract ERC1155 is IERC1155 {
         //require(_value <= items[_itemId].balances[msg.sender]);
         items[_itemId].balances[msg.sender] = items[_itemId].balances[msg.sender].sub(_value);
         items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
-        emit Transfer(msg.sender, _to, _itemId, _value);
+        emit Transfer(msg.sender, msg.sender, _to, _itemId, _value);
     }
 
     function transferFromSingle(address _from, address _to, uint256 _itemId, uint256 _value) external {
@@ -168,31 +108,15 @@ contract ERC1155 is IERC1155 {
         items[_itemId].balances[_from] = items[_itemId].balances[_from].sub(_value);
         items[_itemId].balances[_to] = _value.add(items[_itemId].balances[_to]);
 
-        emit Transfer(_from, _to, _itemId, _value);
+        emit Transfer(msg.sender, _from, _to, _itemId, _value);
     }
 
-    function approveSingle(address _spender, uint256 _itemId, uint256 _value) external {
+    function approveSingle(address _spender, uint256 _itemId, uint256 _currentValue, uint256 _value) external {
         // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
-        require(_value == 0 || allowances[_itemId][msg.sender][_spender] == 0);
+        require(_value == 0 || allowances[_itemId][msg.sender][_spender] == _currentValue);
         allowances[_itemId][msg.sender][_spender] = _value;
-        emit Approval(msg.sender, _spender, _itemId, _value);
+        emit Approval(msg.sender, _spender, _itemId, _currentValue, _value);
     }
-
-    function increaseApprovalSingle(address _spender, uint256 _itemId,  uint256 _addedValue) external {
-        allowances[_itemId][msg.sender][_spender] = _addedValue.add(allowances[_itemId][msg.sender][_spender]);
-        emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
-    }
-
-    function decreaseApprovalSingle(address _spender, uint256 _itemId, uint256 _subtractedValue) external {
-        uint256 oldValue = allowances[_itemId][msg.sender][_spender];
-        if (_subtractedValue > oldValue) {
-            allowances[_itemId][msg.sender][_spender] = 0;
-        } else {
-            allowances[_itemId][msg.sender][_spender] = oldValue.sub(_subtractedValue);
-        }
-        emit Approval(msg.sender, _spender, _itemId, allowances[_itemId][msg.sender][_spender]);
-    }
-
 
     // Optional multicast
     function transferMulticast(address[] _to, uint256[] _itemIds, uint256[] _values) external {
@@ -204,7 +128,7 @@ contract ERC1155 is IERC1155 {
             items[_itemId].balances[msg.sender] = items[_itemId].balances[msg.sender].sub(_value);
             items[_itemId].balances[_dst] = _value.add(items[_itemId].balances[_dst]);
 
-            emit Transfer(msg.sender, _dst, _itemId, _value);
+            emit Transfer(msg.sender, msg.sender, _dst, _itemId, _value);
         }
     }
 
@@ -221,7 +145,7 @@ contract ERC1155 is IERC1155 {
             items[_itemId].balances[_src] = items[_itemId].balances[_src].sub(_value);
             items[_itemId].balances[_dst] = _value.add(items[_itemId].balances[_dst]);
 
-            emit Transfer(_src, _dst, _itemId, _value);
+            emit Transfer(msg.sender, _src, _dst, _itemId, _value);
         }
     }
 
