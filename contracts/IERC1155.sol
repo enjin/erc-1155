@@ -11,7 +11,6 @@ interface IERC1155 {
     function approve(address _spender, uint256[] _itemIds,  uint256[] _currentValues, uint256[] _values) external;
 
     // Required View Functions
-    function totalSupply(uint256 _itemId) external view returns (uint256);
     function balanceOf(uint256 _itemId, address _owner) external view returns (uint256);
     function allowance(uint256 _itemId, address _owner, address _spender) external view returns (uint256);
 
@@ -22,6 +21,7 @@ interface IERC1155 {
     */
 
     /** Optional View Functions
+    function totalSupply(uint256 _itemId) external view returns (uint256);
     function name(uint256 _itemId) external view returns (string);
     function symbol(uint256 _itemId) external view returns (string);
     function decimals(uint256 _itemId) external view returns (uint8);
