@@ -24,11 +24,13 @@ contract ERC1155 is IERC1155 {
     event Transfer(address _spender, address indexed _from, address indexed _to, uint256 indexed _itemId, uint256 _value);
 
     // TEMP CONSTRUCTOR - Testing purposes
+    /**
     constructor() public {
         items[1].balances[msg.sender] = 1000;
         items[2].balances[msg.sender] = 1000;
         items[3].balances[msg.sender] = 1000;
     }
+    */
 
     function transfer(address _to, uint256[] _itemIds, uint256[] _values) external {
         uint256 _itemId;
@@ -46,7 +48,6 @@ contract ERC1155 is IERC1155 {
     }
 
     function transferFrom(address _from, address _to, uint256[] _itemIds, uint256[] _values) external {
-
         uint256 _itemId;
         uint256 _value;
 
@@ -118,7 +119,7 @@ contract ERC1155 is IERC1155 {
         emit Approval(msg.sender, _spender, _itemId, _currentValue, _value);
     }
 
-    // Optional multicast
+    // Optional Multicast Functions
     function transferMulticast(address[] _to, uint256[] _itemIds, uint256[] _values) external {
         for (uint256 i = 0; i < _to.length; ++i) {
             uint256 _itemId = _itemIds[i];
@@ -146,6 +147,22 @@ contract ERC1155 is IERC1155 {
             items[_itemId].balances[_dst] = _value.add(items[_itemId].balances[_dst]);
 
             emit Transfer(msg.sender, _src, _dst, _itemId, _value);
+        }
+    }
+
+    function approveMulticast(address[] _spenders, uint256[] _itemIds,  uint256[] _currentValues, uint256[] _values) external {
+        address _spender;
+        uint256 _itemId;
+        uint256 _value;
+
+        for (uint256 i = 0; i < _itemIds.length; ++i) {
+            _spender = _spenders[i];
+            _itemId = _itemIds[i];
+            _value = _values[i];
+
+            require(_value == 0 || allowances[_itemId][msg.sender][_spender] == _currentValues[i]);
+            allowances[_itemId][msg.sender][_spender] = _value;
+            emit Approval(msg.sender, _spender, _itemId, _currentValues[i], _value);
         }
     }
 

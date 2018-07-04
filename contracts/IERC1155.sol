@@ -18,6 +18,9 @@ interface IERC1155 {
     function transferSingle(address _to, uint256 _itemId, uint256 _value) external;
     function transferFromSingle(address _from, address _to, uint256 _itemId, uint256 _value) external;
     function approveSingle(address _spender, uint256 _itemId, uint256 _currentValue, uint256 _value) external;
+    function transferMulticast(address[] _to, uint256[] _itemIds, uint256[] _values) external;
+    function transferFromMulticast(address[] _from, address[] _to, uint256[] _itemIds, uint256[] _values) external;
+    function approveMulticast(address[] _spenders, uint256[] _itemIds,  uint256[] _currentValues, uint256[] _values) external
     */
 
     /** Optional View Functions
