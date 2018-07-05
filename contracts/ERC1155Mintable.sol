@@ -15,12 +15,7 @@ contract ERC1155Mintable is ERC1155 {
         _;
     }
 
-    function mint(
-        string _name,
-        uint256 _totalSupply,
-        string _uri,
-        uint8 _decimals,
-        string _symbol)
+    function mint(string _name, uint256 _totalSupply, string _uri, uint8 _decimals, string _symbol)
     external returns(uint256 _itemId) {
         _itemId = ++nonce;
         minters[_itemId] = msg.sender; //

@@ -103,7 +103,7 @@ contract ERC1155NonFungible is ERC1155 {
             items[_type].balances[msg.sender] = items[_type].balances[msg.sender].sub(_value);
             items[_type].balances[_to] = _value.add(items[_type].balances[_to]);
 
-            emit Transfer(msg.sender, _to, _itemId, _value);
+            emit Transfer(msg.sender, msg.sender, _to, _itemId, _value);
         }
     }
 
@@ -130,7 +130,7 @@ contract ERC1155NonFungible is ERC1155 {
             items[_type].balances[_from] = items[_type].balances[_from].sub(_value);
             items[_type].balances[_to] = _value.add(items[_type].balances[_to]);
 
-            emit Transfer(_from, _to, _itemId, _value);
+            emit Transfer(msg.sender, _from, _to, _itemId, _value);
         }
     }
 
