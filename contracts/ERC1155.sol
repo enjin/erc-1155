@@ -7,7 +7,6 @@ contract ERC1155 is IERC1155 {
     using SafeMath for uint256;
 
     // Variables
-    uint256 public index = 0;   // The last created itemId (items start at index 1)
     struct Items {
         string name;
         uint256 totalSupply;
@@ -171,6 +170,9 @@ contract ERC1155 is IERC1155 {
         return items[_itemId].balances[_owner];
     }
 
+    function allowance(uint256 _itemId, address _owner, address _spender) external view returns (uint256) {
+        return allowances[_itemId][_owner][_spender];
+    }
 
     // Optional meta data view Functions
     // consider multi-lingual support for name?

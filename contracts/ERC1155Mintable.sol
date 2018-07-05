@@ -8,7 +8,7 @@ import "./ERC1155.sol";
 */
 contract ERC1155Mintable is ERC1155 {
     mapping (uint256 => address) public minters;
-    uint256 nonce;
+    uint256 public nonce;
 
     modifier minterOnly(uint256 _itemId) {
         require(minters[_itemId] == msg.sender);
