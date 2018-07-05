@@ -72,6 +72,75 @@ contract('ERC1155Mintable', (accounts) => {
         assert.strictEqual(maceBalance, 0);
     });
 
+    it('transferFromSingle', async () => {
+        let tx = await mainContract.transferFromSingle(user1, user2, 2, 1, {from: user2});
+        let hammerBalance = (await mainContract.balanceOf.call(1, user2)).toNumber();
+        let swordBalance = (await mainContract.balanceOf.call(2, user2)).toNumber();
+        let maceBalance = (await mainContract.balanceOf.call(3, user2)).toNumber();
+        assert.strictEqual(hammerBalance, 2);
+        assert.strictEqual(swordBalance, 3);
+        assert.strictEqual(maceBalance, 0);
+    });
+
+    it('approveMulticast', async () => {
+        let tx = await mainContract.approveMulticast([user2, user3], [1,2], [0,0], [2,2], {from: user1});
+        tx = await mainContract.approveMulticast([user2, user3], [2,3], [0,0], [1,1], {from: user2});
+
+        let hammerApproval1 = (await mainContract.allowance.call(1, user1, user2)).toNumber();
+        let swordApproval1 = (await mainContract.allowance.call(2, user1, user3)).toNumber();
+        let swordApproval2 = (await mainContract.allowance.call(2, user2, user2)).toNumber();
+        let maceApproval2 = (await mainContract.allowance.call(3, user2, user3)).toNumber();
+
+        assert.strictEqual(hammerApproval1, 2);
+        assert.strictEqual(swordApproval1, 2);
+        assert.strictEqual(swordApproval2, 1);
+        assert.strictEqual(maceApproval2, 1);
+    });
+
+    it('transferMulticast', async () => {
+        let tx = await mainContract.transferMulticast([user2, user3], [2,3], [3,3], {from: user1});
+        let swordBalance = (await mainContract.balanceOf.call(2, user2)).toNumber();
+        let maceBalance = (await mainContract.balanceOf.call(3, user3)).toNumber();
+        assert.strictEqual(swordBalance, 6);
+        assert.strictEqual(maceBalance, 3);
+    });
+
+    it('transferFromMulticast', async () => {
+        let tx = await mainContract.transferFromMulticast([user1, user2], [user3, user3], [1,2], [2,1], {from: user2});
+        tx = await mainContract.transferFromMulticast([user1], [user3], [2], [2], {from: user3});
+
+        let maceApproval2 = (await mainContract.allowance.call(3, user2, user3)).toNumber();
+        console.log('MACE APPROVAL', maceApproval2); // returns 1
+        tx = await mainContract.transferFromMulticast([user2], [user1], [3], [1], {from: user3});
+        //tx = await mainContract.transferFromMulticast([user1, user2], [user3, user1], [2,3], [2,1], {from: user3});
+
+        /*
+        let hammerBalance1 = (await mainContract.balanceOf.call(1, user1)).toNumber();
+        let hammerBalance2 = (await mainContract.balanceOf.call(1, user2)).toNumber();
+        let hammerBalance3 = (await mainContract.balanceOf.call(1, user3)).toNumber();
+
+        let swordBalance1 = (await mainContract.balanceOf.call(2, user1)).toNumber();
+        let swordBalance2 = (await mainContract.balanceOf.call(2, user2)).toNumber();
+        let swordBalance3 = (await mainContract.balanceOf.call(2, user3)).toNumber();
+
+        let maceBalance1 = (await mainContract.balanceOf.call(3, user1)).toNumber();
+        let maceBalance2 = (await mainContract.balanceOf.call(3, user2)).toNumber();
+        let maceBalance3 = (await mainContract.balanceOf.call(3, user3)).toNumber();
+
+        assert.strictEqual(hammerBalance1, 1);
+        assert.strictEqual(hammerBalance2, 2);
+        assert.strictEqual(hammerBalance3, 2);
+
+        assert.strictEqual(swordBalance1, 193);
+        assert.strictEqual(swordBalance2, 6);
+        assert.strictEqual(swordBalance3, 1);
+
+        assert.strictEqual(maceBalance1, 999996);
+        assert.strictEqual(maceBalance2, 1);
+        assert.strictEqual(maceBalance3, 3);
+        */
+    });
+
     // Utility function to display the balances of each account.
     function printBalances(accounts) {
         console.log('    ', '== Truffle Account Balances ==');
