@@ -85,6 +85,7 @@ contract('ERC1155Mintable', (accounts) => {
     it('approveMulticast', async () => {
         let tx = await mainContract.approveMulticast([user2, user3], [1,2], [0,0], [2,2], {from: user1});
         tx = await mainContract.approveMulticast([user2, user3], [2,3], [0,0], [1,1], {from: user2});
+        tx = await mainContract.approveMulticast([user2], [3], [0], [1], {from: user3});
 
         let hammerApproval1 = (await mainContract.allowance.call(1, user1, user2)).toNumber();
         let swordApproval1 = (await mainContract.allowance.call(2, user1, user3)).toNumber();
@@ -109,9 +110,8 @@ contract('ERC1155Mintable', (accounts) => {
         let tx = await mainContract.transferFromMulticast([user1, user2], [user3, user3], [1,2], [2,1], {from: user2});
         tx = await mainContract.transferFromMulticast([user1], [user3], [2], [2], {from: user3});
 
-        let maceApproval2 = (await mainContract.allowance.call(3, user2, user3)).toNumber();
-        console.log('MACE APPROVAL', maceApproval2); // returns 1
-        tx = await mainContract.transferFromMulticast([user2], [user1], [3], [1], {from: user3});
+        let maceApproval2 = (await mainContract.allowance.call(3, user3, user2)).toNumber();
+        tx = await mainContract.transferFromMulticast([user3], [user1], [3], [1], {from: user2});
         //tx = await mainContract.transferFromMulticast([user1, user2], [user3, user1], [2,3], [2,1], {from: user3});
 
         /*
