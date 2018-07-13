@@ -11,8 +11,8 @@ contract ERC1155NonFungibleMintable is ERC1155NonFungible {
     mapping (uint256 => address) public minters;
     uint256 nonce;
 
-    modifier minterOnly(uint256 _itemId) {
-        require(minters[_itemId] == msg.sender);
+    modifier minterOnly(uint256 _id) {
+        require(minters[_id] == msg.sender);
         _;
     }
 
