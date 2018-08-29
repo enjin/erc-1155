@@ -27,7 +27,7 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
 
     function transferFrom(address _from, address _to, uint256 _id, uint256 _value) external {
         if(_from != msg.sender) {
-            require(allowances[_id][_from][msg.sender] >= _value);
+            //require(allowances[_id][_from][msg.sender] >= _value);
             allowances[_id][_from][msg.sender] = allowances[_id][_from][msg.sender].sub(_value);
         }
 
