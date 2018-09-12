@@ -1,10 +1,12 @@
 pragma solidity ^0.4.24;
 
 import "./SafeMath.sol";
+import "./Address.sol";
 import "./IERC1155.sol";
 
 contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155BatchTransferExtended {
     using SafeMath for uint256;
+    using Address for address;
 
     // Variables
     struct Items {
@@ -14,10 +16,11 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
     }
     mapping (uint256 => uint8) public decimals;
     mapping (uint256 => string) public symbols;
-    mapping (uint256 => mapping(address => mapping(address => uint256))) allowances;
+    mapping (uint256 => mapping(address => mapping(address => uint256))) public allowances;
     mapping (uint256 => Items) public items;
-    mapping (uint256 => string) metadataURIs;
+    mapping (uint256 => string) public metadataURIs;
 
+    bytes4 constant private ERC1155_RECEIVED = 0xf23a6e61;
 
 /////////////////////////////////////////// IERC1155 //////////////////////////////////////////////
 
@@ -38,7 +41,10 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
     }
 
     function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
-        revert('TBD');
+        this.transferFrom(_from, _to, _id, _value);
+
+        // solium-disable-next-line arg-overflow
+        require(_checkAndCallSafeTransfer(_from, _to, _id, _value, _data));
     }
 
     function approve(address _spender, uint256 _id, uint256 _currentValue, uint256 _value) external {
@@ -67,7 +73,10 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
     }
 
     function safeTransfer(address _to, uint256 _id, uint256 _value, bytes _data) external {
-        revert('TBD');
+        this.transfer(_to, _id, _value);
+
+        // solium-disable-next-line arg-overflow
+        require(_checkAndCallSafeTransfer(msg.sender, _to, _id, _value, _data));
     }
 
 //////////////////////////////////// IERC1155BatchTransfer ////////////////////////////////////////
@@ -103,7 +112,12 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
     }
 
     function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-        revert('TBD');
+        this.batchTransferFrom(_from, _to, _ids, _values);
+
+        for (uint256 i = 0; i < _ids.length; ++i) {
+            // solium-disable-next-line arg-overflow
+            require(_checkAndCallSafeTransfer(_from, _to, _ids[i], _values[i], _data));
+        }
     }
 
     function batchApprove(address _spender, uint256[] _ids,  uint256[] _currentValues, uint256[] _values) external {
@@ -138,7 +152,12 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
     }
 
     function safeBatchTransfer(address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-        revert('TBD');
+        this.batchTransfer(_to, _ids, _values);
+
+        for (uint256 i = 0; i < _ids.length; ++i) {
+            // solium-disable-next-line arg-overflow
+            require(_checkAndCallSafeTransfer(msg.sender, _to, _ids[i], _values[i], _data));
+        }
     }
 
 //////////////////////////////// IERC1155BatchTransferExtended ////////////////////////////////////
@@ -182,6 +201,31 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
     }
 
     function safeMulticastTransfer(address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-        revert('TBD');
+        this.multicastTransfer(_to, _ids, _values);
+
+        for (uint256 i = 0; i < _ids.length; ++i) {
+            // solium-disable-next-line arg-overflow
+            require(_checkAndCallSafeTransfer(msg.sender, _to[i], _ids[i], _values[i], _data));
+        }
+    }
+
+////////////////////////////////////////// INTERNAL //////////////////////////////////////////////
+
+    function _checkAndCallSafeTransfer(
+        address _from,
+        address _to,
+        uint256 _id,
+        uint256 _value,
+        bytes _data
+    )
+    internal
+    returns (bool)
+    {
+        if (!_to.isContract()) {
+            return true;
+        }
+        bytes4 retval = IERC1155TokenReceiver(_to).onERC1155Received(
+            msg.sender, _from, _id, _value, _data);
+        return (retval == ERC1155_RECEIVED);
     }
 }
