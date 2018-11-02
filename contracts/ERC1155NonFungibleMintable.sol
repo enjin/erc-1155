@@ -62,7 +62,7 @@ contract ERC1155NonFungibleMintable is ERC1155NonFungible {
     }
 
     function mintFungible(uint256 _type, address[] _to, uint256[] _values)
-    external  {
+    external minterOnly(_type) {
 
         require(isFungible(_type));
 
