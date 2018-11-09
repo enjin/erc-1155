@@ -153,7 +153,7 @@ contract('ERC1155Mintable', (accounts) => {
                     return l.args._scope;
                 }
             }
-            assert(false, 'Did not find URI event');
+            assert(false, 'Did not find AddToScope event');
         }
 
         let hammerQuantity = 5;
