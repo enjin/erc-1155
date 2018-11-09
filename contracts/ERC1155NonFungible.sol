@@ -4,7 +4,8 @@ import "./ERC1155.sol";
 
 /**
     @dev Extension to ERC1155 for Mixed Fungible and Non-Fungible Items support
-    Work-in-progress
+    The main benefit is sharing of common type information, just like you do when
+    creating a fungible id.
 */
 contract ERC1155NonFungible is ERC1155 {
 
@@ -18,7 +19,7 @@ contract ERC1155NonFungible is ERC1155 {
     // The top bit is a flag to tell if this is a NFI.
     uint256 constant TYPE_NF_BIT = 1 << 255;
 
-    mapping (uint256 => address) nfiOwners;
+    mapping (uint256 => address) nfOwners;
 
     // Only to make code clearer. Should not be functions
     function isNonFungible(uint256 _id) public pure returns(bool) {
@@ -38,119 +39,115 @@ contract ERC1155NonFungible is ERC1155 {
         return (_id & TYPE_NF_BIT == TYPE_NF_BIT) && (_id & NF_INDEX_MASK == 0);
     }
     function isNonFungibleItem(uint256 _id) public pure returns(bool) {
-        // A base type has the NF bit but does not have an index.
+        // A base type has the NF bit but does has an index.
         return (_id & TYPE_NF_BIT == TYPE_NF_BIT) && (_id & NF_INDEX_MASK != 0);
     }
-
     function ownerOf(uint256 _id) public view returns (address) {
-        return nfiOwners[_id];
+        return nfOwners[_id];
     }
 
-    // retrieves an nfi id for _nfiType with a 1 based index.
-    function nonFungibleByIndex(uint256 _nfiType, uint128 _index) external view returns (uint256) {
-        // Needs to be a valid NFI type, not an actual NFI item
-        require(isNonFungibleBaseType(_nfiType));
-        require(uint256(_index) <= items[_nfiType].totalSupply);
+    // overide
+    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
 
-        uint256 nfiId = _nfiType | uint256(_index);
+        require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
-        return nfiId;
+        if (isNonFungible(_id)) {
+            require(nfOwners[_id] == _from);
+            nfOwners[_id] = _to;
+        } else {
+            balances[_id][_from] = balances[_id][_from].sub(_value);
+            balances[_id][_to]   = balances[_id][_to].add(_value);
+        }
+
+        emit Transfer(msg.sender, _from, _to, _id, _value);
+
+        // solium-disable-next-line arg-overflow
+        require(_checkAndCallSafeTransfer(_from, _to, _id, _value, _data));
     }
 
-    // Allows enumeration of items owned by a specific owner
-    // _index is from 0 to balanceOf(_nfiType, _owner) - 1
-    function nonFungibleOfOwnerByIndex(uint256 _nfiType, address _owner, uint128 _index) external view returns (uint256) {
-        // can't call this on a non-fungible item directly, only its underlying id
-        require(isNonFungibleBaseType(_nfiType));
-        require(_index < items[_nfiType].balances[_owner]);
+    // overide
+    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
 
-        uint256 _numToSkip = _index;
-        uint256 _maxIndex  = items[_nfiType].totalSupply;
+        // Solidity does not scope variables, so declare them here.
+        uint256 id;
+        uint256 value;
+        uint256 i;
 
-        // rather than spending gas storing all this, loop the supply and find the item
-        for (uint256 i = 1; i <= _maxIndex; ++i) {
+        // Only supporting a global operator approval allows us to do only 1 check and not to touch storage to handle allowances.
+        require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
-            uint256 _nfiId    = _nfiType | i;
-            address _nfiOwner = nfiOwners[_nfiId];
+        // Optimize for when _to is not a contract.
+        // This makes safe transfer virtually the same cost as a regular transfer
+        // when not sending to a contract.
+        if (!_to.isContract()) {
+            // We assume _ids.length == _values.length
+            // we don't check since out of bound access will throw.
+            for (i = 0; i < _ids.length; ++i) {
+                id = _ids[i];
+                value = _values[i];
 
-            if (_nfiOwner == _owner) {
-                if (_numToSkip == 0) {
-                    return _nfiId;
+                if (isNonFungible(id)) {
+                    require(nfOwners[id] == _from);
+                    nfOwners[id] = _to;
                 } else {
-                    _numToSkip = _numToSkip.sub(1);
+                    balances[id][_from] = balances[id][_from].sub(value);
+                    balances[id][_to]   = value.add(balances[id][_to]);
                 }
+
+                emit Transfer(msg.sender, _from, _to, id, value);
             }
-        }
+        } else {
+            for (i = 0; i < _ids.length; ++i) {
+                id = _ids[i];
+                value = _values[i];
 
-        return 0;
-    }
+                if (isNonFungible(id)) {
+                    require(nfOwners[id] == _from);
+                    nfOwners[id] = _to;
+                } else {
+                    balances[id][_from] = balances[id][_from].sub(value);
+                    balances[id][_to]   = value.add(balances[id][_to]);
+                }
 
-    // overides
-    function transfer(address _to, uint256[] _ids, uint256[] _values) external {
-        uint256 _id;
-        uint256 _value;
+                emit Transfer(msg.sender, _from, _to, id, value);
 
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            _id = _ids[i];
-            _value  = _values[i];
-
-            if (isNonFungible(_id)) {
-                require(_value == 1);
-                require(nfiOwners[_id] == msg.sender);
-                nfiOwners[_id] = _to;
+                // We know _to is a contract.
+                // Call onERC1155Received and throw if we don't get ERC1155_RECEIVED,
+                // as per the standard requirement. This allows the receiving contract to perform actions
+                require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, id, value, _data) == ERC1155_RECEIVED);
             }
-
-            uint256 _type = _id & TYPE_MASK;
-            items[_type].balances[msg.sender] = items[_type].balances[msg.sender].sub(_value);
-            items[_type].balances[_to] = _value.add(items[_type].balances[_to]);
-
-            emit Transfer(msg.sender, msg.sender, _to, _id, _value);
         }
     }
 
-    function transferFrom(address _from, address _to, uint256[] _ids, uint256[] _values) external {
+    // overide
+    function safeMulticastTransferFrom(
+        address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
 
-        uint256 _id;
-        uint256 _value;
+        for (uint256 i = 0; i < _from.length; ++i) {
+            address dst = _to[i];
+            address src = _from[i];
 
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            _id = _ids[i];
-            _value  = _values[i];
+            // Unlike safeBatchTransferFrom, we need to check inside the loop since src can change.
+            require(src == msg.sender || operatorApproval[src][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
-            if (isNonFungible(_id)) {
-                require(_value == 1);
-                require(nfiOwners[_id] == _from);
-                nfiOwners[_id] = _to;
+            uint256 id = _ids[i];
+            uint256 value = _values[i];
+
+            if (isNonFungible(id)) {
+                require(nfOwners[id] == src);
+                nfOwners[id] = dst;
+            } else {
+                balances[id][src] = balances[id][src].sub(value);
+                balances[id][dst] = value.add(balances[id][dst]);
             }
 
-            if (_from != msg.sender) {
-                allowances[_id][_from][msg.sender] = allowances[_id][_from][msg.sender].sub(_value);
-            }
-
-            uint256 _type = _id & TYPE_MASK;
-            items[_type].balances[_from] = items[_type].balances[_from].sub(_value);
-            items[_type].balances[_to] = _value.add(items[_type].balances[_to]);
-
-            emit Transfer(msg.sender, _from, _to, _id, _value);
+            require(_checkAndCallSafeTransfer(src, dst, id, value, _data) == true, "Failed ERC1155TokenReceive check");
         }
     }
 
     function balanceOf(uint256 _id, address _owner) external view returns (uint256) {
         if (isNonFungibleItem(_id))
-            return ownerOf(_id) == _owner ? 1 : 0;
-        uint256 _type = _id & TYPE_MASK;
-        return items[_type].balances[_owner];
+            return nfOwners[_id] == _owner ? 1 : 0;
+        return balances[_id][_owner];
     }
-
-    function totalSupply(uint256 _id) external view returns (uint256) {
-        // return 1 for a specific nfi, totalSupply otherwise.
-        if (isNonFungibleItem(_id)) {
-            // Make sure this is a valid index for the type.
-            require(getNonFungibleIndex(_id) <= items[_id & TYPE_MASK].totalSupply);
-            return 1;
-        } else {
-            return items[_id].totalSupply;
-        }
-    }
-
 }

@@ -8,11 +8,12 @@ import "./ERC1155NonFungible.sol";
 */
 contract ERC1155NonFungibleMintable is ERC1155NonFungible {
 
-    mapping (uint256 => address) public minters;
     uint256 nonce;
+    mapping (uint256 => address) public creators;
+    mapping (uint256 => uint256) public maxIndex;
 
-    modifier minterOnly(uint256 _id) {
-        require(minters[_id] == msg.sender);
+    modifier creatorOnly(uint256 _id) {
+        require(creators[_id] == msg.sender);
         _;
     }
 
@@ -20,63 +21,65 @@ contract ERC1155NonFungibleMintable is ERC1155NonFungible {
     function create(
         string _name,
         string _uri,
-        uint8 _decimals,
-        string _symbol,
-        bool _isNFI)
+        bool   _isNF)
     external returns(uint256 _type) {
 
         // Store the type in the upper 128 bits
         _type = (++nonce << 128);
 
         // Set a flag if this is an NFI.
-        if (_isNFI)
+        if (_isNF)
           _type = _type | TYPE_NF_BIT;
 
-        // This will allow special access to minters.
-        minters[_type] = msg.sender;
+        // This will allow special access to creators.
+        creators[_type] = msg.sender;
 
-        // Setup the basic info.
-        items[_type].name = _name;
-        decimals[_type] = _decimals;
-        symbols[_type] = _symbol;
-        metadataURIs[_type] = _uri;
+        // emit a transfer event to help with discovery.
+        emit Transfer(msg.sender, 0x0, 0x0, _type, 0);
+
+        if (bytes(_name).length > 0)
+            emit Name(_type, _name);
+
+        if (bytes(_uri).length > 0)
+            emit URI(_type, _uri);
     }
 
-    function mintNonFungible(uint256 _type, address[] _to) external minterOnly(_type) {
+    function mintNonFungible(uint256 _type, address[] _to) external creatorOnly(_type) {
 
+        // No need to check this is a nf type rather than an id since
+        // creatorOnly() will only let a type pass through.
         require(isNonFungible(_type));
 
         // Index are 1-based.
-        uint256 _startIndex = items[_type].totalSupply + 1;
+        uint256 index = maxIndex[_type] + 1;
 
         for (uint256 i = 0; i < _to.length; ++i) {
+            address dst = _to[i];
+            uint256 id  = _type | index + i;
 
-            address _dst = _to[i];
-            uint256 _nfi = _type | (_startIndex + i);
+            nfOwners[id] = dst;
 
-            nfiOwners[_nfi] = _dst;
-            items[_type].balances[_dst] = items[_type].balances[_dst].add(1);
+            // You could use base-type id to store NF type balances if you wish.
+            // balances[_type][dst] = quantity.add(balances[_type][dst]);
+
+            emit Transfer(msg.sender, 0x0, dst, id, 1);
         }
 
-        items[_type].totalSupply = items[_type].totalSupply.add(_to.length);
+        maxIndex[_type] = _to.length.add(maxIndex[_type]);
     }
 
-    function mintFungible(uint256 _type, address[] _to, uint256[] _values)
-    external minterOnly(_type) {
+    function mintFungible(uint256 _id, address[] _to, uint256[] _quantities)  external creatorOnly(_id) {
 
-        require(isFungible(_type));
+        require(isFungible(_id));
 
-        uint256 totalValue;
         for (uint256 i = 0; i < _to.length; ++i) {
 
-            uint256 _value = _values[i];
-            address _dst = _to[i];
+            uint256 quantity = _quantities[i];
+            address dst   = _to[i];
 
-            totalValue = totalValue.add(_value);
+            balances[_id][dst] = quantity.add(balances[_id][dst]);
 
-            items[_type].balances[_dst] = items[_type].balances[_dst].add(_value);
+            emit Transfer(msg.sender, 0x0, dst, _id, quantity);
         }
-
-        items[_type].totalSupply = items[_type].totalSupply.add(totalValue);
     }
 }

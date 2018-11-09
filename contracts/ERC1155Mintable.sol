@@ -7,30 +7,56 @@ import "./ERC1155.sol";
     Shows how easy it is to mint new items
 */
 contract ERC1155Mintable is ERC1155 {
-    mapping (uint256 => address) public minters;
+
+    // id => creators
+    mapping (uint256 => address) public creators;
+    // A nonce to ensure we have a unique id each time we mint.
     uint256 public nonce;
 
-    modifier minterOnly(uint256 _id) {
-        require(minters[_id] == msg.sender);
+    modifier creatorOnly(uint256 _id) {
+        require(creators[_id] == msg.sender);
         _;
     }
 
-    function mint(string _name, uint256 _totalSupply, string _uri, uint8 _decimals, string _symbol)
-    external returns(uint256 _id) {
+    // Creates a new token type and assings balance to minter
+    function create(uint256 _initialSupply, string _name, string _uri) external returns(uint256 _id) {
         _id = ++nonce;
-        minters[_id] = msg.sender; //
+        creators[_id] = msg.sender;
 
-        items[_id].name = _name;
-        items[_id].totalSupply = _totalSupply;
-        metadataURIs[_id] = _uri;
-        decimals[_id] = _decimals;
-        symbols[_id] = _symbol;
+        balances[_id][msg.sender] = _initialSupply;
 
-        // Grant the items to the minter
-        items[_id].balances[msg.sender] = _totalSupply;
+        // emit a transfer event to help with discovery.
+        emit Transfer(msg.sender, 0x0, msg.sender, _id, _initialSupply);
+
+        if (bytes(_name).length > 0)
+            emit Name(_id, _name);
+
+        if (bytes(_uri).length > 0)
+            emit URI(_id, _uri);
     }
 
-    function setURI(uint256 _id, string _uri) external minterOnly(_id) {
-        metadataURIs[_id] = _uri;
+    // Batch mint tokens. Assign directly to _to[].
+    function mint(uint256 _id, address[] _to, uint256[] _quantities) external creatorOnly(_id){
+        for (uint256 i = 0; i < _to.length; ++i) {
+
+            address to = _to[i];
+            uint256 quantity = _quantities[i];
+
+            // Grant the items to the caller
+            balances[_id][to] = quantity.add(balances[_id][to]);
+
+            // Emit the Transfer/Mint event.
+            // the 0x0 source address implies a mint
+            // It will also provide the circulating supply info.
+            emit Transfer(msg.sender, 0x0, to, _id, quantity);
+        }
+    }
+
+    function setURI(uint256 _id, string _uri) external creatorOnly(_id) {
+        emit URI(_id, _uri);
+    }
+
+    function setName(uint256 _id, string _name) external creatorOnly(_id) {
+        emit Name(_id, _name);
     }
 }

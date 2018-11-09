@@ -2,213 +2,188 @@ pragma solidity ^0.4.24;
 
 import "./SafeMath.sol";
 import "./Address.sol";
+import "./IERC1155TokenReceiver.sol";
 import "./IERC1155.sol";
+import "./IERC1155Multicast.sol";
 
-contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155BatchTransferExtended {
+// A basic implementation of ERC1155.
+// Supports core 1155 as well as Multicast
+contract ERC1155 is IERC1155, IERC1155Multicast
+{
     using SafeMath for uint256;
     using Address for address;
 
-    // Variables
-    struct Items {
-        string name;
-        uint256 totalSupply;
-        mapping (address => uint256) balances;
+    bytes4 constant public ERC1155_RECEIVED = 0xf23a6e61;
+
+    // id => (owner => balance)
+    mapping (uint256 => mapping(address => uint256)) internal balances;
+
+    // owner => (operator => approved)
+    mapping (address => mapping(address => bool)) internal operatorApproval;
+
+/////////////////////////////////////////// ERC165 //////////////////////////////////////////////
+
+    function supportsInterface(bytes4 _interfaceId)
+    external
+    view
+    returns (bool) {
+         // ToDo recalc interface.
+         if (_interfaceId == 0) {
+            return true;
+         }
+
+         return false;
     }
-    mapping (uint256 => uint8) public decimals;
-    mapping (uint256 => string) public symbols;
-    mapping (uint256 => mapping(address => mapping(address => uint256))) public allowances;
-    mapping (uint256 => Items) public items;
-    mapping (uint256 => string) public metadataURIs;
+/////////////////////////////////////////// ERC1155 //////////////////////////////////////////////
 
-    bytes4 constant private ERC1155_RECEIVED = 0xf23a6e61;
+    /**
+        @notice Transfers value amount of an _id from the _from address to the _to addresses specified. Each parameter array should be the same length, with each index correlating.
+        @dev MUST emit Transfer event on success.
+        Caller must have sufficient allowance by _from for the _id/_value pair, or isApprovedForAll must be true.
+        Throws if `_to` is the zero address.
+        Throws if `_id` is not a valid token ID.
+        When transfer is complete, this function checks if `_to` is a smart contract (code size > 0). If so, it calls `onERC1155Received` on `_to` and throws if the return value is not `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`.
+        @param _from    source addresses
+        @param _to      target addresses
+        @param _id      ID of the Token
+        @param _value   transfer amounts
+        @param _data    Additional data with no specified format, sent in call to `_to`
+    */
+    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
 
-/////////////////////////////////////////// IERC1155 //////////////////////////////////////////////
+        require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
-    // Events
-    event Approval(address indexed _owner, address indexed _spender, uint256 indexed _id, uint256 _oldValue, uint256 _value);
-    event Transfer(address _spender, address indexed _from, address indexed _to, uint256 indexed _id, uint256 _value);
-
-    function transferFrom(address _from, address _to, uint256 _id, uint256 _value) external {
-        if(_from != msg.sender) {
-            // require not needed because of SafeMath: .sub() will throw on underflow.
-            // require(allowances[_id][_from][msg.sender] >= _value);
-            allowances[_id][_from][msg.sender] = allowances[_id][_from][msg.sender].sub(_value);
-        }
-
-        items[_id].balances[_from] = items[_id].balances[_from].sub(_value);
-        items[_id].balances[_to] = _value.add(items[_id].balances[_to]);
+        // Note: SafeMath will deal with insuficient funds _from
+        balances[_id][_from] = balances[_id][_from].sub(_value);
+        balances[_id][_to]   = _value.add(balances[_id][_to]);
 
         emit Transfer(msg.sender, _from, _to, _id, _value);
-    }
-
-    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
-        this.transferFrom(_from, _to, _id, _value);
 
         // solium-disable-next-line arg-overflow
         require(_checkAndCallSafeTransfer(_from, _to, _id, _value, _data));
     }
 
-    function approve(address _spender, uint256 _id, uint256 _currentValue, uint256 _value) external {
-        // if the allowance isn't 0, it can only be updated to 0 to prevent an allowance change immediately after withdrawal
-        require(_value == 0 || allowances[_id][msg.sender][_spender] == _currentValue);
-        allowances[_id][msg.sender][_spender] = _value;
-        emit Approval(msg.sender, _spender, _id, _currentValue, _value);
-    }
-
-    function balanceOf(uint256 _id, address _owner) external view returns (uint256) {
-        return items[_id].balances[_owner];
-    }
-
-    function allowance(uint256 _id, address _owner, address _spender) external view returns (uint256) {
-        return allowances[_id][_owner][_spender];
-    }
-
-/////////////////////////////////////// IERC1155Extended //////////////////////////////////////////
-
-    function transfer(address _to, uint256 _id, uint256 _value) external {
-        // Not needed. SafeMath will do the same check on .sub(_value)
-        //require(_value <= items[_id].balances[msg.sender]);
-        items[_id].balances[msg.sender] = items[_id].balances[msg.sender].sub(_value);
-        items[_id].balances[_to] = _value.add(items[_id].balances[_to]);
-        emit Transfer(msg.sender, msg.sender, _to, _id, _value);
-    }
-
-    function safeTransfer(address _to, uint256 _id, uint256 _value, bytes _data) external {
-        this.transfer(_to, _id, _value);
-
-        // solium-disable-next-line arg-overflow
-        require(_checkAndCallSafeTransfer(msg.sender, _to, _id, _value, _data));
-    }
-
-//////////////////////////////////// IERC1155BatchTransfer ////////////////////////////////////////
-
-    function batchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values) external {
-        uint256 _id;
-        uint256 _value;
-
-        if(_from == msg.sender) {
-            for (uint256 i = 0; i < _ids.length; ++i) {
-                _id = _ids[i];
-                _value = _values[i];
-
-                items[_id].balances[_from] = items[_id].balances[_from].sub(_value);
-                items[_id].balances[_to] = _value.add(items[_id].balances[_to]);
-
-                emit Transfer(msg.sender, _from, _to, _id, _value);
-            }
-        }
-        else {
-            for (i = 0; i < _ids.length; ++i) {
-                _id = _ids[i];
-                _value = _values[i];
-
-                allowances[_id][_from][msg.sender] = allowances[_id][_from][msg.sender].sub(_value);
-
-                items[_id].balances[_from] = items[_id].balances[_from].sub(_value);
-                items[_id].balances[_to] = _value.add(items[_id].balances[_to]);
-
-                emit Transfer(msg.sender, _from, _to, _id, _value);
-            }
-        }
-    }
-
+    /**
+        @notice Send multiple types of Tokens from a 3rd party in one transfer (with safety call)
+        @dev MUST emit Transfer event per id on success.
+        Caller must have a sufficient allowance by _from for each of the id/value pairs.
+        Throws on any error rather than return a false flag to minimize user errors.
+        @param _from    Source address
+        @param _to      Target address
+        @param _ids     Types of Tokens
+        @param _values  Transfer amounts per token type
+        @param _data    Additional data with no specified format, sent in call to `_to`
+    */
     function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-        this.batchTransferFrom(_from, _to, _ids, _values);
 
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            // solium-disable-next-line arg-overflow
-            require(_checkAndCallSafeTransfer(_from, _to, _ids[i], _values[i], _data));
+        // Solidity does not scope variables, so declare them here.
+        uint256 id;
+        uint256 value;
+        uint256 i;
+
+        // Only supporting a global operator approval allows us to do only 1 check and not to touch storage to handle allowances.
+        require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
+
+        // Optimize for when _to is not a contract.
+        // This makes safe transfer virtually the same cost as a regular transfer
+        // when not sending to a contract.
+        if (!_to.isContract()) {
+            // We assume _ids.length == _values.length
+            // we don't check since out of bound access will throw.
+            for (i = 0; i < _ids.length; ++i) {
+                id = _ids[i];
+                value = _values[i];
+
+                balances[id][_from] = balances[id][_from].sub(value);
+                balances[id][_to] = value.add(balances[id][_to]);
+
+                emit Transfer(msg.sender, _from, _to, id, value);
+            }
+        } else {
+            for (i = 0; i < _ids.length; ++i) {
+                id = _ids[i];
+                value = _values[i];
+
+                balances[id][_from] = balances[id][_from].sub(value);
+                balances[id][_to] = value.add(balances[id][_to]);
+
+                emit Transfer(msg.sender, _from, _to, id, value);
+
+                // We know _to is a contract.
+                // Call onERC1155Received and throw if we don't get ERC1155_RECEIVED,
+                // as per the standard requirement. This allows the receiving contract to perform actions
+                require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, id, value, _data) == ERC1155_RECEIVED);
+            }
         }
     }
 
-    function batchApprove(address _spender, uint256[] _ids,  uint256[] _currentValues, uint256[] _values) external {
-        uint256 _id;
-        uint256 _value;
+    // The balance of any account can be calculated from the Transfer events history.
+    // However, since we need to keep the balances to validate transfer request,
+    // there is no extra cost to also privide a querry function.
+    function balanceOf(uint256 _id, address _owner) external view returns (uint256) {
+        return balances[_id][_owner];
+    }
 
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            _id = _ids[i];
-            _value = _values[i];
+    /**
+        @notice Enable or disable approval for a third party ("operator") to manage all of `msg.sender`'s tokens.
+        @dev MUST emit the ApprovalForAll event on success.
+        @param _operator  Address to add to the set of authorized operators
+        @param _approved  True if the operator is approved, false to revoke approval
+    */
+    function setApprovalForAll(address _operator, bool _approved) external {
+        operatorApproval[msg.sender][_operator] = _approved;
+        emit ApprovalForAll(msg.sender, _operator, _approved);
+    }
 
-            require(_value == 0 || allowances[_id][msg.sender][_spender] == _currentValues[i]);
-            allowances[_id][msg.sender][_spender] = _value;
-            emit Approval(msg.sender, _spender, _id, _currentValues[i], _value);
+    /**
+        @notice Queries the approval status of an operator for a given Token and owner
+        @param _owner     The owner of the Tokens
+        @param _operator  Address of authorized operator
+        @return           True if the operator is approved, false if not
+    */
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool isOperator) {
+        isOperator = operatorApproval[_owner][_operator];
+    }
+
+
+////////////////////////////////////////// IERC1155Multicast //////////////////////////////////////////////
+
+    /**
+        @dev Send multiple types of Tokens in one transfer from multiple sources.
+             This function allows arbitrary trades to be performed with N parties.
+             A common pattern is a 3 party tradewith 2 parties exchanging tokens,
+             plus a 3rd party operator collecting some fee to manage the trade)
+        @param _from    Source addresses
+        @param _to      Transfer destination addresses
+        @param _ids     Types of Tokens
+        @param _values  Transfer amounts
+        @param _data    Additional data with no specified format, sent in call to each `_to[]` address
+    */
+    function safeMulticastTransferFrom(
+        address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
+
+        for (uint256 i = 0; i < _from.length; ++i) {
+            address dst = _to[i];
+            address src = _from[i];
+
+            // Unlike safeBatchTransferFrom, we need to check inside the loop since src can change.
+            require(src == msg.sender || operatorApproval[src][msg.sender] == true, "Need operator approval for 3rd party transfers.");
+
+            uint256 id = _ids[i];
+            uint256 value = _values[i];
+
+            balances[id][src] = balances[id][src].sub(value);
+            balances[id][dst] = value.add(balances[id][dst]);
+
+            emit Transfer(msg.sender, src, dst, id, value);
+
+            // Note that the optional _data passed to the reciveiver is the same for all transfers.
+            require(_checkAndCallSafeTransfer(src, dst, id, value, _data) == true, "Failed ERC1155TokenReceive check");
         }
     }
 
-//////////////////////////////// IERC1155BatchTransferExtended ////////////////////////////////////
-
-    function batchTransfer(address _to, uint256[] _ids, uint256[] _values) external {
-        uint256 _id;
-        uint256 _value;
-
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            _id = _ids[i];
-            _value = _values[i];
-
-            items[_id].balances[msg.sender] = items[_id].balances[msg.sender].sub(_value);
-            items[_id].balances[_to] = _value.add(items[_id].balances[_to]);
-
-            emit Transfer(msg.sender, msg.sender, _to, _id, _value);
-        }
-    }
-
-    function safeBatchTransfer(address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-        this.batchTransfer(_to, _ids, _values);
-
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            // solium-disable-next-line arg-overflow
-            require(_checkAndCallSafeTransfer(msg.sender, _to, _ids[i], _values[i], _data));
-        }
-    }
-
-//////////////////////////////// IERC1155BatchTransferExtended ////////////////////////////////////
-
-    // Optional meta data view Functions
-    // consider multi-lingual support for name?
-    function name(uint256 _id) external view returns (string) {
-        return items[_id].name;
-    }
-
-    function symbol(uint256 _id) external view returns (string) {
-        return symbols[_id];
-    }
-
-    function decimals(uint256 _id) external view returns (uint8) {
-        return decimals[_id];
-    }
-
-    function totalSupply(uint256 _id) external view returns (uint256) {
-        return items[_id].totalSupply;
-    }
-
-    function uri(uint256 _id) external view returns (string) {
-        return metadataURIs[_id];
-    }
-
-////////////////////////////////////////// OPTIONALS //////////////////////////////////////////////
 
 
-    function multicastTransfer(address[] _to, uint256[] _ids, uint256[] _values) external {
-        for (uint256 i = 0; i < _to.length; ++i) {
-            uint256 _id = _ids[i];
-            uint256 _value = _values[i];
-            address _dst = _to[i];
-
-            items[_id].balances[msg.sender] = items[_id].balances[msg.sender].sub(_value);
-            items[_id].balances[_dst] = _value.add(items[_id].balances[_dst]);
-
-            emit Transfer(msg.sender, msg.sender, _dst, _id, _value);
-        }
-    }
-
-    function safeMulticastTransfer(address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-        this.multicastTransfer(_to, _ids, _values);
-
-        for (uint256 i = 0; i < _ids.length; ++i) {
-            // solium-disable-next-line arg-overflow
-            require(_checkAndCallSafeTransfer(msg.sender, _to[i], _ids[i], _values[i], _data));
-        }
-    }
 
 ////////////////////////////////////////// INTERNAL //////////////////////////////////////////////
 
@@ -229,4 +204,6 @@ contract ERC1155 is IERC1155, IERC1155Extended, IERC1155BatchTransfer, IERC1155B
             msg.sender, _from, _id, _value, _data);
         return (retval == ERC1155_RECEIVED);
     }
+
+
 }
