@@ -4,11 +4,11 @@ import "./SafeMath.sol";
 import "./Address.sol";
 import "./IERC1155TokenReceiver.sol";
 import "./IERC1155.sol";
-import "./IERC1155Multicast.sol";
+import "./ERC165.sol";
 
 // A basic implementation of ERC1155.
-// Supports core 1155 as well as Multicast
-contract ERC1155 is IERC1155, IERC1155Multicast
+// Supports core 1155
+contract ERC1155 is IERC1155, ERC165
 {
     using SafeMath for uint256;
     using Address for address;
@@ -117,37 +117,6 @@ contract ERC1155 is IERC1155, IERC1155Multicast
         }
     }
 
-    // The balance of any account can be calculated from the Transfer events history.
-    // However, since we need to keep the balances to validate transfer request,
-    // there is no extra cost to also privide a querry function.
-    function balanceOf(uint256 _id, address _owner) external view returns (uint256) {
-        return balances[_id][_owner];
-    }
-
-    /**
-        @notice Enable or disable approval for a third party ("operator") to manage all of `msg.sender`'s tokens.
-        @dev MUST emit the ApprovalForAll event on success.
-        @param _operator  Address to add to the set of authorized operators
-        @param _approved  True if the operator is approved, false to revoke approval
-    */
-    function setApprovalForAll(address _operator, bool _approved) external {
-        operatorApproval[msg.sender][_operator] = _approved;
-        emit ApprovalForAll(msg.sender, _operator, _approved);
-    }
-
-    /**
-        @notice Queries the approval status of an operator for a given Token and owner
-        @param _owner     The owner of the Tokens
-        @param _operator  Address of authorized operator
-        @return           True if the operator is approved, false if not
-    */
-    function isApprovedForAll(address _owner, address _operator) external view returns (bool isOperator) {
-        isOperator = operatorApproval[_owner][_operator];
-    }
-
-
-////////////////////////////////////////// IERC1155Multicast //////////////////////////////////////////////
-
     /**
         @dev Send multiple types of Tokens in one transfer from multiple sources.
              This function allows arbitrary trades to be performed with N parties.
@@ -182,6 +151,34 @@ contract ERC1155 is IERC1155, IERC1155Multicast
         }
     }
 
+
+    // The balance of any account can be calculated from the Transfer events history.
+    // However, since we need to keep the balances to validate transfer request,
+    // there is no extra cost to also privide a querry function.
+    function balanceOf(uint256 _id, address _owner) external view returns (uint256) {
+        return balances[_id][_owner];
+    }
+
+    /**
+        @notice Enable or disable approval for a third party ("operator") to manage all of `msg.sender`'s tokens.
+        @dev MUST emit the ApprovalForAll event on success.
+        @param _operator  Address to add to the set of authorized operators
+        @param _approved  True if the operator is approved, false to revoke approval
+    */
+    function setApprovalForAll(address _operator, bool _approved) external {
+        operatorApproval[msg.sender][_operator] = _approved;
+        emit ApprovalForAll(msg.sender, _operator, _approved);
+    }
+
+    /**
+        @notice Queries the approval status of an operator for a given Token and owner
+        @param _owner     The owner of the Tokens
+        @param _operator  Address of authorized operator
+        @return           True if the operator is approved, false if not
+    */
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool isOperator) {
+        isOperator = operatorApproval[_owner][_operator];
+    }
 
 
 
