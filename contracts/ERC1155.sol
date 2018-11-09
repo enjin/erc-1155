@@ -130,15 +130,13 @@ contract ERC1155 is IERC1155, ERC165
         @param _data    Additional data with no specified format, sent in call to each `_to[]` address
     */
     function safeMulticastTransferFrom(address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-        // Note that we don't need this function to be payable in this basic implementation,
-        // this is perfectly ok.
-        for (uint256 i = 0; i < _from.length; ++i) {
-            address dst = _to[i];
-            address src = _from[i];
 
+        for (uint256 i = 0; i < _from.length; ++i) {
+            address src = _from[i];
             // Unlike safeBatchTransferFrom, we need to check inside the loop since src can change.
             require(src == msg.sender || operatorApproval[src][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
+            address dst = _to[i];
             uint256 id = _ids[i];
             uint256 value = _values[i];
 
@@ -191,7 +189,6 @@ contract ERC1155 is IERC1155, ERC165
         require(_scope == 0x0);
         return operatorApproval[_owner][_operator];
     }
-
 
 ////////////////////////////////////////// INTERNAL //////////////////////////////////////////////
 
