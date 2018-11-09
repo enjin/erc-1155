@@ -20,6 +20,8 @@ let hammerId;
 let swordId;
 let maceId;
 
+let scope;
+
 function verifyName(tx, id, name) {
     for (let l of tx.logs) {
         if (l.event === 'Name') {
@@ -58,6 +60,26 @@ function verifyTransferEvent(tx, id, from, to, quantity, operator) {
         assert(false, 'Missing Transfer Event');
     else
         assert(eventCount === 1, 'Unexpected number of Transfer events');
+}
+
+async function testSafeTransferFrom(operator, from, to, id, quantity, data) {
+
+    let preBalanceFrom = await mainContract.balanceOf(from, id);
+    let preBalanceTo   = await mainContract.balanceOf(to, id);
+
+    tx = await mainContract.safeTransferFrom(from, to, id, quantity, data, {from: operator});
+    verifyTransferEvent(tx, id, from, to, quantity, operator);
+
+    let postBalanceFrom = await mainContract.balanceOf(from, id);
+    let postBalanceTo   = await mainContract.balanceOf(to, id);
+
+    if (from !== to){
+        assert.strictEqual(preBalanceFrom.sub(quantity).toNumber(),postBalanceFrom.toNumber());
+        assert.strictEqual(preBalanceTo.add(quantity).toNumber(), postBalanceTo.toNumber());
+    } else {
+        // When from === to, just make
+        assert.strictEqual(preBalanceFrom.toNumber(),postBalanceFrom.toNumber());
+    }
 }
 
 function verifyTransferEvents(tx, ids, from, to, quantities, operator) {
@@ -123,11 +145,25 @@ contract('ERC1155Mintable', (accounts) => {
             assert(false, 'Did not find initial Transfer event');
         }
 
+        function verifyScope(tx, id) {
+            for (let l of tx.logs) {
+                if (l.event === 'AddToScope') {
+                    assert(l.args._startId.eq(id));
+                    assert(l.args._endId.eq(id));
+                    return l.args._scope;
+                }
+            }
+            assert(false, 'Did not find URI event');
+        }
+
         let hammerQuantity = 5;
         let hammerName = 'Hammer';
         let hammerUri = 'https://metadata.enjincoin.io/hammer.json';
         tx = await mainContract.create(hammerQuantity, hammerName, hammerUri, {from: user1});
         hammerId = verifyCreateTransfer(tx, hammerQuantity, user1);
+
+        scope = verifyScope(tx, hammerId);
+
         // This is implementation-specific,
         // but we choose to name and add an URI on creation.
         // Make sure the Name and URI event is emited correctly.
@@ -151,56 +187,62 @@ contract('ERC1155Mintable', (accounts) => {
         verifyURI(tx, maceId, maceUri);
     });
 
-    it('safeTransferFrom', async () => {
-
-        // Failure cases:
-        // 1- Account with no balance. Must throw.
+    it('safeTransferFrom throws with no balance', async () => {
         await expectThrow(mainContract.safeTransferFrom(user2, user1, hammerId, 1, '', {from: user2}));
-        // 2- Invalid id is basically the same case as no balance. Must throw.
+    });
+
+    it('safeTransferFrom throws with invalid id', async () => {
         await expectThrow(mainContract.safeTransferFrom(user2, user1, 32, 1, '', {from: user2}));
-        // 3- Account with no approval cannot transfer from a 3rd party. Must throw.
+    });
+
+    it('safeTransferFrom throws with no approval', async () => {
         await expectThrow(mainContract.safeTransferFrom(user1, user2, hammerId, 1, '', {from: user2}));
-        // 4- Exceeds balance. Must throw.
+    });
+
+    it('safeTransferFrom throws with scoped approval for other scope', async () => {
+        await mainContract.setApprovalForAll(user2, true, 0x1, {from:user1});
+        await expectThrow(mainContract.safeTransferFrom(user1, user2, hammerId, 1, '', {from: user2}));
+        await mainContract.setApprovalForAll(user2, false, 0x1, {from:user1});
+    });
+
+    it('safeTransferFrom throws when exceeding balance', async () => {
         await expectThrow(mainContract.safeTransferFrom(user1, user2, hammerId, 6, '', {from: user1}));
-        // 5- Can't send to non-reciveiver contract. Must throw.
+    });
+
+    it('safeTransferFrom throws when sending to non-receiver contract', async () => {
         await expectThrow(mainContract.safeTransferFrom(user1, mainContract.address, hammerId, 1, '', {from: user1}));
-        // 6- Receiver contract reject. Must throw.
+    });
+
+    it('safeTransferFrom throws if invalid response from receiver contract', async () => {
         await receiverContract.setShouldReject(true);
         await expectThrow(mainContract.safeTransferFrom(user1, receiverContract.address, hammerId, 1, 'Bob', {from: user1}));
+    });
 
-        async function testSafeTransferFrom(operator, from, to, id, quantity, data) {
-
-            let preBalanceFrom = await mainContract.balanceOf(from, id);
-            let preBalanceTo   = await mainContract.balanceOf(to, id);
-
-            tx = await mainContract.safeTransferFrom(from, to, id, quantity, data, {from: operator});
-            verifyTransferEvent(tx, id, from, to, quantity, operator);
-
-            let postBalanceFrom = await mainContract.balanceOf(from, id);
-            let postBalanceTo   = await mainContract.balanceOf(to, id);
-
-            if (from !== to){
-                assert.strictEqual(preBalanceFrom.sub(quantity).toNumber(),postBalanceFrom.toNumber());
-                assert.strictEqual(preBalanceTo.add(quantity).toNumber(), postBalanceTo.toNumber());
-            } else {
-                // When from === to, just make
-                assert.strictEqual(preBalanceFrom.toNumber(),postBalanceFrom.toNumber());
-            }
-        }
-
-        // Success cases
-        // 1- From self with enough balance is ok.
+    it('safeTransferFrom from self with enough balance', async () => {
         await testSafeTransferFrom(user1, user1, user2, hammerId, 1, '');
-        // 2- Sending to self is ok, but need balance.
+    });
+
+    it('safeTransferFrom to self with enough balance', async () => {
         await testSafeTransferFrom(user1, user1, user1, hammerId, 1, '');
-        // 3- Sending zero value is ok, even with 0 balance
+    });
+
+    it('safeTransferFrom zero value', async () => {
         await testSafeTransferFrom(user3, user3, user1, hammerId, 0, '');
-        // 4- From approved 3rd party.
+    });
+
+    it('safeTransferFrom from approved global operator', async () => {
         await mainContract.setApprovalForAll(user3, true, 0x0, {from:user1});
         await testSafeTransferFrom(user3, user1, user2, hammerId, 1, '');
         await mainContract.setApprovalForAll(user3, false, 0x0, {from:user1});
+    });
 
-        // 5-To receiver contract is ok if contract accept.
+    it('safeTransferFrom from approved scoped operator', async () => {
+        await mainContract.setApprovalForAll(user3, true, scope, {from:user1});
+        await testSafeTransferFrom(user3, user1, user2, hammerId, 1, '');
+        await mainContract.setApprovalForAll(user3, false, scope, {from:user1});
+    });
+
+    it('safeTransferFrom to reciever contract', async () => {
         await receiverContract.setShouldReject(false);
         await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, 'SomethingMeaningfull');
     });
