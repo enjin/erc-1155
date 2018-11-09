@@ -7,27 +7,37 @@ pragma solidity ^0.4.24;
 interface IERC1155 {
     /**
         @dev MUST emit when tokens are transferred, including zero value transfers as well as minting or burning.
-        A `Transfer` event from address `0x0` signifies a minting operation. The value may be used by clients and exchanges to be added to the "circulating supply" for a given token ID.
-		    A `Transfer` event to address `0x0` signifies a burning or melting operation.
-		    This MUST emit a zero value, from `0x0` to the creator's address if a token has no initial balance but is being defined/created.
+        A `Transfer` event from address `0x0` signifies a minting operation. The total value transferred from address 0x0 minus the total value transferred to 0x0 may be used by clients and exchanges to be added to the "circulating supply" for a given token ID
+        A `Transfer` event to address `0x0` signifies a burning or melting operation.
+        This MUST emit a 0 value, from `0x0` to `0x0` with `_operator` assuming the role of the token creator. This can be used to define a token ID with no initial balance at the time of creation.
     */
-    event Transfer(address _spender, address indexed _from, address indexed _to, uint256 indexed _id, uint256 _value);
+    event Transfer(address _operator, address indexed _from, address indexed _to, uint256 indexed _id, uint256 _value);
 
     /**
-        @dev MUST emit on any successful call to setApprovalForAll(address _operator, bool _approved)
+        @dev MUST emit when an approval is updated
     */
-    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
+    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved, bytes32 indexed _scope);
+
+    /**
+        @dev MUST emit when adding to an approval scope
+    */
+    event AddToScope(bytes32 indexed _scope, uint256 indexed _startId, uint256 indexed _endId);
+
+    /**
+        @dev MUST emit when removing from an existing approval scope
+    */
+    event RemoveFromScope(bytes32 indexed _scope, uint256 indexed _startId, uint256 indexed _endId);
 
     /**
         @dev Emits when the URI is updated for a token ID.
         The URI may point to a JSON file that conforms to the "ERC-1155 Metadata JSON Schema".
     */
-    event URI(uint256 indexed _id, string _value);
+    event URI(string _value, uint256 indexed _id);
 
     /**
         @dev Emits when the Name is updated for a token ID
     */
-    event Name(uint256 indexed _id, string _value);
+    event Name(string _value, uint256 indexed _id);
 
     /**
         @notice Transfers value amount of an _id from the _from address to the _to addresses specified. Each parameter array should be the same length, with each index correlating.
@@ -42,7 +52,7 @@ interface IERC1155 {
         @param _value   transfer amounts
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external;
+    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external /*payable*/;
 
     /**
         @notice Send multiple types of Tokens from a 3rd party in one transfer (with safety call)
@@ -55,29 +65,42 @@ interface IERC1155 {
         @param _values  Transfer amounts per token type
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external;
+    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external /*payable*/;
+
+    /**
+        @dev Send multiple types of Tokens in one transfer from multiple sources.
+        @param _from    Source addresses
+        @param _to      Transfer destination addresses
+        @param _ids     Types of Tokens
+        @param _values  Transfer amounts
+        @param _data    Additional data with no specified format, sent in call to each `_to[]` address
+    */
+    function safeMulticastTransferFrom(address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external /*payable*/;
 
     /**
         @notice Get the balance of an account's Tokens
-        @param _id     ID of the Token
         @param _owner  The address of the token holder
+        @param _id     ID of the Token
         @return        The _owner's balance of the Token type requested
      */
-    function balanceOf(uint256 _id, address _owner) external view returns (uint256);
+    function balanceOf(address _owner, uint256 _id) external view returns (uint256);
 
     /**
         @notice Enable or disable approval for a third party ("operator") to manage all of `msg.sender`'s tokens.
         @dev MUST emit the ApprovalForAll event on success.
         @param _operator  Address to add to the set of authorized operators
         @param _approved  True if the operator is approved, false to revoke approval
+        @param _scope     Optional argument allowing to scope approval to a set of ids. Passing a value of 0
+                          gives approval for all ids. MUST throw if the _scope value is not a supported scope.
     */
-    function setApprovalForAll(address _operator, bool _approved) external;
+    function setApprovalForAll(address _operator, bool _approved, bytes32 _scope) external;
 
     /**
         @notice Queries the approval status of an operator for a given Token and owner
         @param _owner     The owner of the Tokens
         @param _operator  Address of authorized operator
+        @param _scope     A scope of 0 refers to all IDs
         @return           True if the operator is approved, false if not
     */
-    function isApprovedForAll(address _owner, address _operator) external view returns (bool isOperator);
+    function isApprovedForAll(address _owner, address _operator, bytes32 _scope) view external returns (bool);
 }

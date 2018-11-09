@@ -145,7 +145,7 @@ contract ERC1155NonFungible is ERC1155 {
         }
     }
 
-    function balanceOf(uint256 _id, address _owner) external view returns (uint256) {
+    function balanceOf(address _owner, uint256 _id) external view returns (uint256) {
         if (isNonFungibleItem(_id))
             return nfOwners[_id] == _owner ? 1 : 0;
         return balances[_id][_owner];

@@ -34,6 +34,7 @@ contract ERC1155 is IERC1155, ERC165
 
          return false;
     }
+
 /////////////////////////////////////////// ERC1155 //////////////////////////////////////////////
 
     /**
@@ -128,9 +129,9 @@ contract ERC1155 is IERC1155, ERC165
         @param _values  Transfer amounts
         @param _data    Additional data with no specified format, sent in call to each `_to[]` address
     */
-    function safeMulticastTransferFrom(
-        address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-
+    function safeMulticastTransferFrom(address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
+        // Note that we don't need this function to be payable in this basic implementation,
+        // this is perfectly ok.
         for (uint256 i = 0; i < _from.length; ++i) {
             address dst = _to[i];
             address src = _from[i];
@@ -151,11 +152,16 @@ contract ERC1155 is IERC1155, ERC165
         }
     }
 
-
-    // The balance of any account can be calculated from the Transfer events history.
-    // However, since we need to keep the balances to validate transfer request,
-    // there is no extra cost to also privide a querry function.
-    function balanceOf(uint256 _id, address _owner) external view returns (uint256) {
+    /**
+        @notice Get the balance of an account's Tokens
+        @param _owner  The address of the token holder
+        @param _id     ID of the Token
+        @return        The _owner's balance of the Token type requested
+     */
+    function balanceOf(address _owner, uint256 _id) external view returns (uint256) {
+        // The balance of any account can be calculated from the Transfer events history.
+        // However, since we need to keep the balances to validate transfer request,
+        // there is no extra cost to also privide a querry function.
         return balances[_id][_owner];
     }
 
@@ -164,22 +170,27 @@ contract ERC1155 is IERC1155, ERC165
         @dev MUST emit the ApprovalForAll event on success.
         @param _operator  Address to add to the set of authorized operators
         @param _approved  True if the operator is approved, false to revoke approval
+        @param _scope     Optional argument allowing to scope approval to a set of ids. Passing a value of 0
+                          gives approval for all ids. MUST throw if the _scope value is not a supported scope.
     */
-    function setApprovalForAll(address _operator, bool _approved) external {
+    function setApprovalForAll(address _operator, bool _approved, bytes32 _scope) external {
+       // Only supporting global scope for this implementation.
+        require(_scope == 0x0);
         operatorApproval[msg.sender][_operator] = _approved;
-        emit ApprovalForAll(msg.sender, _operator, _approved);
+        emit ApprovalForAll(msg.sender, _operator, _approved, _scope);
     }
 
     /**
         @notice Queries the approval status of an operator for a given Token and owner
         @param _owner     The owner of the Tokens
         @param _operator  Address of authorized operator
+        @param _scope     A scope of 0 refers to all IDs
         @return           True if the operator is approved, false if not
     */
-    function isApprovedForAll(address _owner, address _operator) external view returns (bool isOperator) {
-        isOperator = operatorApproval[_owner][_operator];
+    function isApprovedForAll(address _owner, address _operator, bytes32 _scope) external view returns (bool) {
+        require(_scope == 0x0);
+        return operatorApproval[_owner][_operator];
     }
-
 
 
 ////////////////////////////////////////// INTERNAL //////////////////////////////////////////////

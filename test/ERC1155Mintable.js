@@ -46,7 +46,7 @@ function verifyTransferEvent(tx, id, from, to, quantity, operator) {
     let eventCount = 0;
     for (let l of tx.logs) {
         if (l.event === 'Transfer') {
-            assert(l.args._spender === operator, "Operator mis-match");
+            assert(l.args._operator === operator, "Operator mis-match");
             assert(l.args._from === from, "from mis-match");
             assert(l.args._to === to, "to mis-match");
             assert(l.args._id.eq(id), "id mis-match");
@@ -68,7 +68,7 @@ function verifyTransferEvents(tx, ids, from, to, quantities, operator) {
         let quantity = quantities[i];
         for (let l of tx.logs) {
             if (l.event === 'Transfer' &&
-                l.args._spender === operator &&
+                l.args._operator === operator &&
                 l.args._from === from &&
                 l.args._to === to &&
                 l.args._id.eq(id) &&
@@ -102,7 +102,7 @@ contract('ERC1155Mintable', (accounts) => {
         function verifyCreateTransfer(tx, value, creator) {
             for (let l of tx.logs) {
                 if (l.event === 'Transfer') {
-                    assert(l.args._spender === creator);
+                    assert(l.args._operator === creator);
                     // This signifies minting.
                     assert(l.args._from === zeroAddress);
                     if (value > 0) {
@@ -170,14 +170,14 @@ contract('ERC1155Mintable', (accounts) => {
 
         async function testSafeTransferFrom(operator, from, to, id, quantity, data) {
 
-            let preBalanceFrom = await mainContract.balanceOf(id, from);
-            let preBalanceTo   = await mainContract.balanceOf(id, to);
+            let preBalanceFrom = await mainContract.balanceOf(from, id);
+            let preBalanceTo   = await mainContract.balanceOf(to, id);
 
             tx = await mainContract.safeTransferFrom(from, to, id, quantity, data, {from: operator});
             verifyTransferEvent(tx, id, from, to, quantity, operator);
 
-            let postBalanceFrom = await mainContract.balanceOf(id, from);
-            let postBalanceTo   = await mainContract.balanceOf(id, to);
+            let postBalanceFrom = await mainContract.balanceOf(from, id);
+            let postBalanceTo   = await mainContract.balanceOf(to, id);
 
             if (from !== to){
                 assert.strictEqual(preBalanceFrom.sub(quantity).toNumber(),postBalanceFrom.toNumber());
@@ -196,9 +196,9 @@ contract('ERC1155Mintable', (accounts) => {
         // 3- Sending zero value is ok, even with 0 balance
         await testSafeTransferFrom(user3, user3, user1, hammerId, 0, '');
         // 4- From approved 3rd party.
-        await mainContract.setApprovalForAll(user3, true, {from:user1});
+        await mainContract.setApprovalForAll(user3, true, 0x0, {from:user1});
         await testSafeTransferFrom(user3, user1, user2, hammerId, 1, '');
-        await mainContract.setApprovalForAll(user3, false, {from:user1});
+        await mainContract.setApprovalForAll(user3, false, 0x0, {from:user1});
 
         // 5-To receiver contract is ok if contract accept.
         await receiverContract.setShouldReject(false);
@@ -231,20 +231,20 @@ contract('ERC1155Mintable', (accounts) => {
 
             for (let id of ids)
             {
-                preBalanceFrom.push(await mainContract.balanceOf(id, from));
-                preBalanceTo.push(await mainContract.balanceOf(id, to));
+                preBalanceFrom.push(await mainContract.balanceOf(from, id));
+                preBalanceTo.push(await mainContract.balanceOf(to, id));
             }
 
             tx = await mainContract.safeBatchTransferFrom(from, to, ids, quantities, data, {from: operator});
             verifyTransferEvents(tx, id, from, to, quantity, operator);
 
-            let postBalanceFrom = {}; await mainContract.balanceOf(id, from);
-            let postBalanceTo   = {}; await mainContract.balanceOf(id, to);
+            let postBalanceFrom = {}; await mainContract.balanceOf(from, id);
+            let postBalanceTo   = {}; await mainContract.balanceOf(to, id);
 
             for (let id of ids)
             {
-                postBalanceFrom.push(await mainContract.balanceOf(id, from));
-                postBalanceTo.push(await mainContract.balanceOf(id, to));
+                postBalanceFrom.push(await mainContract.balanceOf(from, id));
+                postBalanceTo.push(await mainContract.balanceOf(to, id));
             }
 
             for (let i = 0; i < ids.length; ++i) {

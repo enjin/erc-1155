@@ -29,10 +29,10 @@ contract ERC1155Mintable is ERC1155 {
         emit Transfer(msg.sender, 0x0, msg.sender, _id, _initialSupply);
 
         if (bytes(_name).length > 0)
-            emit Name(_id, _name);
+            emit Name(_name, _id);
 
         if (bytes(_uri).length > 0)
-            emit URI(_id, _uri);
+            emit URI(_uri, _id);
     }
 
     // Batch mint tokens. Assign directly to _to[].
@@ -52,11 +52,11 @@ contract ERC1155Mintable is ERC1155 {
         }
     }
 
-    function setURI(uint256 _id, string _uri) external creatorOnly(_id) {
-        emit URI(_id, _uri);
+    function setURI(string _uri, uint256 _id) external creatorOnly(_id) {
+        emit URI(_uri, _id);
     }
 
-    function setName(uint256 _id, string _name) external creatorOnly(_id) {
-        emit Name(_id, _name);
+    function setName(string _name, uint256 _id) external creatorOnly(_id) {
+        emit Name(_name, _id);
     }
 }

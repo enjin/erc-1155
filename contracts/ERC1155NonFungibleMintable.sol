@@ -38,10 +38,10 @@ contract ERC1155NonFungibleMintable is ERC1155NonFungible {
         emit Transfer(msg.sender, 0x0, 0x0, _type, 0);
 
         if (bytes(_name).length > 0)
-            emit Name(_type, _name);
+            emit Name(_name, _type);
 
         if (bytes(_uri).length > 0)
-            emit URI(_type, _uri);
+            emit URI(_uri, _type);
     }
 
     function mintNonFungible(uint256 _type, address[] _to) external creatorOnly(_type) {
