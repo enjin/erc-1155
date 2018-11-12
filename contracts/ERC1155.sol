@@ -168,25 +168,19 @@ contract ERC1155 is IERC1155, ERC165
         @dev MUST emit the ApprovalForAll event on success.
         @param _operator  Address to add to the set of authorized operators
         @param _approved  True if the operator is approved, false to revoke approval
-        @param _scope     Optional argument allowing to scope approval to a set of ids. Passing a value of 0
-                          gives approval for all ids. MUST throw if the _scope value is not a supported scope.
     */
-    function setApprovalForAll(address _operator, bool _approved, bytes32 _scope) external {
-       // Only supporting global scope for this implementation.
-        require(_scope == 0x0);
+    function setApprovalForAll(address _operator, bool _approved) external {
         operatorApproval[msg.sender][_operator] = _approved;
-        emit ApprovalForAll(msg.sender, _operator, _approved, _scope);
+        emit ApprovalForAll(msg.sender, _operator, _approved);
     }
 
     /**
         @notice Queries the approval status of an operator for a given Token and owner
         @param _owner     The owner of the Tokens
         @param _operator  Address of authorized operator
-        @param _scope     A scope of 0 refers to all IDs
         @return           True if the operator is approved, false if not
     */
-    function isApprovedForAll(address _owner, address _operator, bytes32 _scope) external view returns (bool) {
-        require(_scope == 0x0);
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool) {
         return operatorApproval[_owner][_operator];
     }
 

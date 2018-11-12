@@ -16,17 +16,7 @@ interface IERC1155 {
     /**
         @dev MUST emit when an approval is updated
     */
-    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved, bytes32 indexed _scope);
-
-    /**
-        @dev MUST emit when adding to an approval scope
-    */
-    event AddToScope(bytes32 indexed _scope, uint256 indexed _startId, uint256 indexed _endId);
-
-    /**
-        @dev MUST emit when removing from an existing approval scope
-    */
-    event RemoveFromScope(bytes32 indexed _scope, uint256 indexed _startId, uint256 indexed _endId);
+    event ApprovalForAll(address indexed _owner, address indexed _operator, bool _approved);
 
     /**
         @dev Emits when the URI is updated for a token ID.
@@ -90,17 +80,14 @@ interface IERC1155 {
         @dev MUST emit the ApprovalForAll event on success.
         @param _operator  Address to add to the set of authorized operators
         @param _approved  True if the operator is approved, false to revoke approval
-        @param _scope     Optional argument allowing to scope approval to a set of ids. Passing a value of 0
-                          gives approval for all ids. MUST throw if the _scope value is not a supported scope.
     */
-    function setApprovalForAll(address _operator, bool _approved, bytes32 _scope) external;
+    function setApprovalForAll(address _operator, bool _approved) external;
 
     /**
         @notice Queries the approval status of an operator for a given Token and owner
         @param _owner     The owner of the Tokens
         @param _operator  Address of authorized operator
-        @param _scope     A scope of 0 refers to all IDs
         @return           True if the operator is approved, false if not
     */
-    function isApprovedForAll(address _owner, address _operator, bytes32 _scope) view external returns (bool);
+    function isApprovedForAll(address _owner, address _operator) view external returns (bool);
 }
