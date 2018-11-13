@@ -4,7 +4,6 @@ import "./SafeMath.sol";
 import "./Address.sol";
 import "./IERC1155TokenReceiver.sol";
 import "./IERC1155.sol";
-import "./ERC165.sol";
 
 // A basic implementation of ERC1155.
 // Supports core 1155
