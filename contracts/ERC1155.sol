@@ -23,16 +23,16 @@ contract ERC1155 is IERC1155, ERC165
 
 /////////////////////////////////////////// ERC165 //////////////////////////////////////////////
 
-    function supportsInterface(bytes4 _interfaceId)
-    external
-    view
-    returns (bool) {
-         // ToDo recalc interface.
-         if (_interfaceId == 0) {
-            return true;
-         }
-
-         return false;
+    constructor() internal {
+        _registerInterface(
+            // this.supportsInterface.selector ^ // <- include this?
+            this.safeTransferFrom.selector ^
+            this.safeBatchTransferFrom.selector ^
+            this.safeMulticastTransferFrom.selector ^
+            this.balanceOf.selector ^
+            this.setApprovalForAll.selector ^
+            this.isApprovedForAll.selector
+        );
     }
 
 /////////////////////////////////////////// ERC1155 //////////////////////////////////////////////
