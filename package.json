@@ -7,7 +7,7 @@
     "test": "test"
   },
   "dependencies": {
-    "zeppelin-solidity": "^1.8.0"
+    "openzeppelin-solidity": "^2.0.0"
   },
   "devDependencies": {
     "truffle": "^4.1.14"

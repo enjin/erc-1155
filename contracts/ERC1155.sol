@@ -1,7 +1,8 @@
 pragma solidity ^0.4.24;
 
-import "./SafeMath.sol";
-import "./Address.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "openzeppelin-solidity/contracts/utils/Address.sol";
+import "openzeppelin-solidity/contracts/introspection/ERC165.sol";
 import "./IERC1155TokenReceiver.sol";
 import "./IERC1155.sol";
 

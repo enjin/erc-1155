@@ -1,13 +1,13 @@
 pragma solidity ^0.4.24;
 
 import "./IERC1155.sol";
-import "./ERC165.sol";
-import "./SafeMath.sol";
+import "openzeppelin-solidity/contracts/introspection/IERC165.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 // Shows how you could wrap some allowance on top of ERC1155
 // A user would setApprovalForAll(true) for this wrapper in the target contract,
 // and the set the individual allowances here.
-contract AllowanceWrapper is IERC1155, ERC165
+contract AllowanceWrapper is IERC165, IERC1155
 {
     using SafeMath for uint256;
 
@@ -62,7 +62,7 @@ contract AllowanceWrapper is IERC1155, ERC165
     external
     view
     returns (bool) {
-         ERC165(targetContract).supportsInterface(_interfaceId);
+         IERC165(targetContract).supportsInterface(_interfaceId);
     }
 
     /**
