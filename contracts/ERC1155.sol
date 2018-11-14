@@ -2,12 +2,12 @@ pragma solidity 0.4.24;
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 import "openzeppelin-solidity/contracts/utils/Address.sol";
-import "openzeppelin-solidity/contracts/introspection/ERC165.sol";
+import "openzeppelin-solidity/contracts/introspection/IERC165.sol";
 import "./IERC1155TokenReceiver.sol";
 import "./IERC1155.sol";
 
 // A sample implementation of core ERC1155 function.
-contract ERC1155 is IERC1155, ERC165
+contract ERC1155 is IERC1155, IERC165
 {
     using SafeMath for uint256;
     using Address for address;
