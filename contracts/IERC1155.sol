@@ -6,7 +6,7 @@ import "openzeppelin-solidity/contracts/introspection/IERC165.sol";
     @title ERC-1155 Multi Token Standard
     @dev Note: the ERC-165 identifier for this interface is 0xf23a6e61.
  */
-interface IERC1155 /*is IERC165*/ {
+/*interface*/ contract IERC1155 is IERC165 {
     /**
         @dev MUST emit when tokens are transferred, including zero value transfers as well as minting or burning.
         A `Transfer` event from address `0x0` signifies a minting operation. The total value transferred from address 0x0 minus the total value transferred to 0x0 may be used by clients and exchanges to be added to the "circulating supply" for a given token ID
