@@ -7,7 +7,7 @@ import "./ERC1155.sol";
     The main benefit is sharing of common type information, just like you do when
     creating a fungible id.
 */
-contract ERC1155NonFungible is ERC1155 {
+contract ERC1155MixedFungible is ERC1155 {
 
     // Use a split bit implementation.
     // Store the type in the upper 128 bits..
@@ -116,32 +116,6 @@ contract ERC1155NonFungible is ERC1155 {
                 // as per the standard requirement. This allows the receiving contract to perform actions
                 require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, id, value, _data) == ERC1155_RECEIVED);
             }
-        }
-    }
-
-    // overide
-    function safeMulticastTransferFrom(
-        address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-
-        for (uint256 i = 0; i < _from.length; ++i) {
-            address dst = _to[i];
-            address src = _from[i];
-
-            // Unlike safeBatchTransferFrom, we need to check inside the loop since src can change.
-            require(src == msg.sender || operatorApproval[src][msg.sender] == true, "Need operator approval for 3rd party transfers.");
-
-            uint256 id = _ids[i];
-            uint256 value = _values[i];
-
-            if (isNonFungible(id)) {
-                require(nfOwners[id] == src);
-                nfOwners[id] = dst;
-            } else {
-                balances[id][src] = balances[id][src].sub(value);
-                balances[id][dst] = value.add(balances[id][dst]);
-            }
-
-            require(_checkAndCallSafeTransfer(src, dst, id, value, _data) == true, "Failed ERC1155TokenReceive check");
         }
     }
 
