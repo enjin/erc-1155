@@ -13,7 +13,7 @@ interface IERC1155TokenReceiver {
         @param _id        The identifier of the item being transferred
         @param _value     The amount of the item being transferred
         @param _data      Additional data with no specified format
-        @return           `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`
+        @return           `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`  which is 0xf23a6e61
     */
     function onERC1155Received(address _operator, address _from, uint256 _id, uint256 _value, bytes _data) external returns(bytes4);
 }

@@ -4,7 +4,7 @@ import "./ERC165.sol";
 
 /**
     @title ERC-1155 Multi Token Standard
-    @dev Note: the ERC-165 identifier for this interface is 0xf23a6e61.
+    @dev Note: the ERC-165 identifier for this interface is 0x97a409d2.
  */
 interface IERC1155 /*is ERC165*/ {
     /**
@@ -58,16 +58,6 @@ interface IERC1155 /*is ERC165*/ {
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
     function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external /*payable*/;
-
-    /**
-        @dev Send multiple types of Tokens in one transfer from multiple sources.
-        @param _from    Source addresses
-        @param _to      Transfer destination addresses
-        @param _ids     Types of Tokens
-        @param _values  Transfer amounts
-        @param _data    Additional data with no specified format, sent in call to each `_to[]` address
-    */
-    function safeMulticastTransferFrom(address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external /*payable*/;
 
     /**
         @notice Get the balance of an account's Tokens

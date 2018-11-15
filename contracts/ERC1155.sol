@@ -22,12 +22,26 @@ contract ERC1155 is IERC1155, ERC165
 
 /////////////////////////////////////////// ERC165 //////////////////////////////////////////////
 
+    /*
+        bytes4(keccak256('supportsInterface(bytes4)'));
+    */
+    bytes4 constant private INTERFACE_SIGNATURE_ERC165 = 0x01ffc9a7;
+
+    /*
+        bytes4(keccak256("safeTransferFrom(address,address,uint256,uint256,bytes)")) ^
+        bytes4(keccak256("safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)")) ^
+        bytes4(keccak256("balanceOf(address,uint256)")) ^
+        bytes4(keccak256("setApprovalForAll(address,bool)")) ^
+        bytes4(keccak256("isApprovedForAll(address,address)"));
+    */
+    bytes4 constant private INTERFACE_SIGNATURE_ERC1155 = 0x97a409d2;
+
     function supportsInterface(bytes4 _interfaceId)
     external
     view
     returns (bool) {
-         // ToDo recalc interface.
-         if (_interfaceId == 0) {
+         if (_interfaceId == INTERFACE_SIGNATURE_ERC165 ||
+             _interfaceId == INTERFACE_SIGNATURE_ERC1155) {
             return true;
          }
 
@@ -114,38 +128,6 @@ contract ERC1155 is IERC1155, ERC165
                 // as per the standard requirement. This allows the receiving contract to perform actions
                 require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, id, value, _data) == ERC1155_RECEIVED);
             }
-        }
-    }
-
-    /**
-        @dev Send multiple types of Tokens in one transfer from multiple sources.
-             This function allows arbitrary trades to be performed with N parties.
-             A common pattern is a 3 party tradewith 2 parties exchanging tokens,
-             plus a 3rd party operator collecting some fee to manage the trade)
-        @param _from    Source addresses
-        @param _to      Transfer destination addresses
-        @param _ids     Types of Tokens
-        @param _values  Transfer amounts
-        @param _data    Additional data with no specified format, sent in call to each `_to[]` address
-    */
-    function safeMulticastTransferFrom(address[] _from, address[] _to, uint256[] _ids, uint256[] _values, bytes _data) external {
-
-        for (uint256 i = 0; i < _from.length; ++i) {
-            address src = _from[i];
-            // Unlike safeBatchTransferFrom, we need to check inside the loop since src can change.
-            require(src == msg.sender || operatorApproval[src][msg.sender] == true, "Need operator approval for 3rd party transfers.");
-
-            address dst = _to[i];
-            uint256 id = _ids[i];
-            uint256 value = _values[i];
-
-            balances[id][src] = balances[id][src].sub(value);
-            balances[id][dst] = value.add(balances[id][dst]);
-
-            emit Transfer(msg.sender, src, dst, id, value);
-
-            // Note that the optional _data passed to the reciveiver is the same for all transfers.
-            require(_checkAndCallSafeTransfer(src, dst, id, value, _data) == true, "Failed ERC1155TokenReceive check");
         }
     }
 
