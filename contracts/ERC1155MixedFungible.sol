@@ -49,6 +49,7 @@ contract ERC1155MixedFungible is ERC1155 {
     // overide
     function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
 
+        require(_to != 0);
         require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
         if (isNonFungible(_id)) {
@@ -62,11 +63,14 @@ contract ERC1155MixedFungible is ERC1155 {
         emit Transfer(msg.sender, _from, _to, _id, _value);
 
         // solium-disable-next-line arg-overflow
-        require(_checkAndCallSafeTransfer(_from, _to, _id, _value, _data));
+        _checkAndCallSafeTransfer(_from, _to, _id, _value, _data);
     }
 
     // overide
     function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
+
+        require(_to != 0);
+        require(_ids.length == _values.length);
 
         // Solidity does not scope variables, so declare them here.
         uint256 id;

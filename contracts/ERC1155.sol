@@ -65,6 +65,7 @@ contract ERC1155 is IERC1155, ERC165
     */
     function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
 
+        require(_to != 0);
         require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
         // Note: SafeMath will deal with insuficient funds _from
@@ -74,7 +75,7 @@ contract ERC1155 is IERC1155, ERC165
         emit Transfer(msg.sender, _from, _to, _id, _value);
 
         // solium-disable-next-line arg-overflow
-        require(_checkAndCallSafeTransfer(_from, _to, _id, _value, _data));
+        _checkAndCallSafeTransfer(_from, _to, _id, _value, _data);
     }
 
     /**
@@ -89,6 +90,9 @@ contract ERC1155 is IERC1155, ERC165
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
     function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
+
+        require(_to != 0);
+        require(_ids.length == _values.length);
 
         // Solidity does not scope variables, so declare them here.
         uint256 id;
@@ -175,15 +179,10 @@ contract ERC1155 is IERC1155, ERC165
         bytes _data
     )
     internal
-    returns (bool)
     {
-        if (!_to.isContract()) {
-            return true;
+        if (_to.isContract()) {
+            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED);
         }
-        bytes4 retval = IERC1155TokenReceiver(_to).onERC1155Received(
-            msg.sender, _from, _id, _value, _data);
-        return (retval == ERC1155_RECEIVED);
     }
-
 
 }
