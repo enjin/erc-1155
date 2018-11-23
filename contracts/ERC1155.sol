@@ -63,6 +63,7 @@ contract ERC1155 is IERC1155, ERC165
         @param _value   transfer amounts
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
+
     function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
 
         require(_to != 0);
@@ -72,10 +73,17 @@ contract ERC1155 is IERC1155, ERC165
         balances[_id][_from] = balances[_id][_from].sub(_value);
         balances[_id][_to]   = _value.add(balances[_id][_to]);
 
-        emit Transfer(msg.sender, _from, _to, _id, _value);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = _id;
 
-        // solium-disable-next-line arg-overflow
-        _checkAndCallSafeTransfer(_from, _to, _id, _value, _data);
+        uint256[] memory values = new uint256[](1);
+        values[0] = _value;
+
+        emit Transfer(msg.sender, _from, _to, ids, values);
+
+        if (_to.isContract()) {
+            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED);
+        }
     }
 
     /**
@@ -102,36 +110,20 @@ contract ERC1155 is IERC1155, ERC165
         // Only supporting a global operator approval allows us to do only 1 check and not to touch storage to handle allowances.
         require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
-        // Optimize for when _to is not a contract.
-        // This makes safe transfer virtually the same cost as a regular transfer
-        // when not sending to a contract.
-        if (!_to.isContract()) {
-            // We assume _ids.length == _values.length
-            // we don't check since out of bound access will throw.
-            for (i = 0; i < _ids.length; ++i) {
-                id = _ids[i];
-                value = _values[i];
+        // We assume _ids.length == _values.length
+        // we don't check since out of bound access will throw.
+        for (i = 0; i < _ids.length; ++i) {
+            id = _ids[i];
+            value = _values[i];
 
-                balances[id][_from] = balances[id][_from].sub(value);
-                balances[id][_to] = value.add(balances[id][_to]);
+            balances[id][_from] = balances[id][_from].sub(value);
+            balances[id][_to] = value.add(balances[id][_to]);
+        }
 
-                emit Transfer(msg.sender, _from, _to, id, value);
-            }
-        } else {
-            for (i = 0; i < _ids.length; ++i) {
-                id = _ids[i];
-                value = _values[i];
+        emit Transfer(msg.sender, _from, _to, _ids, _values);
 
-                balances[id][_from] = balances[id][_from].sub(value);
-                balances[id][_to] = value.add(balances[id][_to]);
-
-                emit Transfer(msg.sender, _from, _to, id, value);
-
-                // We know _to is a contract.
-                // Call onERC1155Received and throw if we don't get ERC1155_RECEIVED,
-                // as per the standard requirement. This allows the receiving contract to perform actions
-                require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, id, value, _data) == ERC1155_RECEIVED);
-            }
+        if (_to.isContract()) {
+            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_RECEIVED);
         }
     }
 
@@ -168,21 +160,4 @@ contract ERC1155 is IERC1155, ERC165
     function isApprovedForAll(address _owner, address _operator) external view returns (bool) {
         return operatorApproval[_owner][_operator];
     }
-
-////////////////////////////////////////// INTERNAL //////////////////////////////////////////////
-
-    function _checkAndCallSafeTransfer(
-        address _from,
-        address _to,
-        uint256 _id,
-        uint256 _value,
-        bytes _data
-    )
-    internal
-    {
-        if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED);
-        }
-    }
-
 }

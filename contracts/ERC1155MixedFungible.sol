@@ -55,71 +55,55 @@ contract ERC1155MixedFungible is ERC1155 {
         if (isNonFungible(_id)) {
             require(nfOwners[_id] == _from);
             nfOwners[_id] = _to;
+            // You could keep balance of NF type in base type id like so:
+            // uint256 baseType = getNonFungibleBaseType(_id);
+            // balances[baseType][_from] = balances[baseType][_from].sub(_value);
+            // balances[baseType][_to]   = balances[baseType][_to].add(_value);
         } else {
             balances[_id][_from] = balances[_id][_from].sub(_value);
             balances[_id][_to]   = balances[_id][_to].add(_value);
         }
 
-        emit Transfer(msg.sender, _from, _to, _id, _value);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = _id;
 
-        // solium-disable-next-line arg-overflow
-        _checkAndCallSafeTransfer(_from, _to, _id, _value, _data);
+        uint256[] memory values = new uint256[](1);
+        values[0] = _value;
+
+        emit Transfer(msg.sender, _from, _to, ids, values);
+
+        if (_to.isContract()) {
+            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED);
+        }
     }
 
     // overide
     function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
 
-        require(_to != 0);
-        require(_ids.length == _values.length);
-
-        // Solidity does not scope variables, so declare them here.
-        uint256 id;
-        uint256 value;
-        uint256 i;
+        require(_to != 0, "cannot send to zero address");
+        require(_ids.length == _values.length, "Array length must match");
 
         // Only supporting a global operator approval allows us to do only 1 check and not to touch storage to handle allowances.
         require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
-        // Optimize for when _to is not a contract.
-        // This makes safe transfer virtually the same cost as a regular transfer
-        // when not sending to a contract.
-        if (!_to.isContract()) {
-            // We assume _ids.length == _values.length
-            // we don't check since out of bound access will throw.
-            for (i = 0; i < _ids.length; ++i) {
-                id = _ids[i];
-                value = _values[i];
+        for (uint256 i = 0; i < _ids.length; ++i) {
+            // Cache value to local variable to reduce read costs.
+            uint256 id = _ids[i];
+            uint256 value = _values[i];
 
-                if (isNonFungible(id)) {
-                    require(nfOwners[id] == _from);
-                    nfOwners[id] = _to;
-                } else {
-                    balances[id][_from] = balances[id][_from].sub(value);
-                    balances[id][_to]   = value.add(balances[id][_to]);
-                }
-
-                emit Transfer(msg.sender, _from, _to, id, value);
+            if (isNonFungible(id)) {
+                require(nfOwners[id] == _from);
+                nfOwners[id] = _to;
+            } else {
+                balances[id][_from] = balances[id][_from].sub(value);
+                balances[id][_to]   = value.add(balances[id][_to]);
             }
-        } else {
-            for (i = 0; i < _ids.length; ++i) {
-                id = _ids[i];
-                value = _values[i];
+        }
 
-                if (isNonFungible(id)) {
-                    require(nfOwners[id] == _from);
-                    nfOwners[id] = _to;
-                } else {
-                    balances[id][_from] = balances[id][_from].sub(value);
-                    balances[id][_to]   = value.add(balances[id][_to]);
-                }
+        emit Transfer(msg.sender, _from, _to, _ids, _values);
 
-                emit Transfer(msg.sender, _from, _to, id, value);
-
-                // We know _to is a contract.
-                // Call onERC1155Received and throw if we don't get ERC1155_RECEIVED,
-                // as per the standard requirement. This allows the receiving contract to perform actions
-                require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, id, value, _data) == ERC1155_RECEIVED);
-            }
+        if (_to.isContract()) {
+            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_RECEIVED);
         }
     }
 

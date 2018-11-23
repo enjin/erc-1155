@@ -19,26 +19,37 @@ contract ERC1155Mintable is ERC1155 {
         _;
     }
 
-    // Creates a new token type and assings balance to minter
+    // Creates a new token type and assings _initialSupply to minter
     function create(uint256 _initialSupply, string _name, string _uri) external returns(uint256 _id) {
         _id = ++nonce;
         creators[_id] = msg.sender;
 
         balances[_id][msg.sender] = _initialSupply;
 
-        // emit a transfer event to help with discovery.
-        emit Transfer(msg.sender, 0x0, msg.sender, _id, _initialSupply);
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = _id;
+
+        uint256[] memory values = new uint256[](1);
+        values[0] = _initialSupply;
+
+        // Transfer event with mint semantic
+        emit Transfer(msg.sender, 0x0, msg.sender, ids, values);
 
         if (bytes(_name).length > 0)
             emit Name(_name, _id);
 
         if (bytes(_uri).length > 0)
             emit URI(_uri, _id);
-
     }
 
     // Batch mint tokens. Assign directly to _to[].
-    function mint(uint256 _id, address[] _to, uint256[] _quantities) external creatorOnly(_id){
+    function mint(uint256 _id, address[] _to, uint256[] _quantities) external creatorOnly(_id) {
+
+        uint256[] memory ids = new uint256[](1);
+        ids[0] = _id;
+
+        uint256[] memory values = new uint256[](1);
+
         for (uint256 i = 0; i < _to.length; ++i) {
 
             address to = _to[i];
@@ -50,7 +61,12 @@ contract ERC1155Mintable is ERC1155 {
             // Emit the Transfer/Mint event.
             // the 0x0 source address implies a mint
             // It will also provide the circulating supply info.
-            emit Transfer(msg.sender, 0x0, to, _id, quantity);
+            values[0] = quantity;
+            emit Transfer(msg.sender, 0x0, to, ids, values);
+
+            if (to.isContract()) {
+                require(IERC1155TokenReceiver(to).onERC1155Received(msg.sender, msg.sender, _id, quantity, '') == ERC1155_RECEIVED);
+            }
         }
     }
 

@@ -8,12 +8,12 @@ import "./ERC165.sol";
  */
 interface IERC1155 /*is ERC165*/ {
     /**
-        @dev MUST emit when tokens are transferred, including zero value transfers as well as minting or burning.
+        @dev MUST emit when tokens are transferred, including zero value transfers as well as minting or burning. Supports single or multiple _ids and _values.
         A `Transfer` event from address `0x0` signifies a minting operation. The total value transferred from address 0x0 minus the total value transferred to 0x0 may be used by clients and exchanges to be added to the "circulating supply" for a given token ID
         A `Transfer` event to address `0x0` signifies a burning or melting operation.
         This MUST emit a 0 value, from `0x0` to `0x0` with `_operator` assuming the role of the token creator. This can be used to define a token ID with no initial balance at the time of creation.
     */
-    event Transfer(address _operator, address indexed _from, address indexed _to, uint256 indexed _id, uint256 _value);
+    event Transfer(address indexed _operator, address indexed _from, address indexed _to, uint256[] _ids, uint256[] _values);
 
     /**
         @dev MUST emit when an approval is updated
@@ -44,7 +44,7 @@ interface IERC1155 /*is ERC165*/ {
         @param _value   transfer amounts
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external /*payable*/;
+    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external;
 
     /**
         @notice Send multiple types of Tokens from a 3rd party in one transfer (with safety call)
@@ -57,7 +57,7 @@ interface IERC1155 /*is ERC165*/ {
         @param _values  Transfer amounts per token type
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external /*payable*/;
+    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external;
 
     /**
         @notice Get the balance of an account's Tokens
@@ -81,5 +81,5 @@ interface IERC1155 /*is ERC165*/ {
         @param _operator  Address of authorized operator
         @return           True if the operator is approved, false if not
     */
-    function isApprovedForAll(address _owner, address _operator) view external returns (bool);
+    function isApprovedForAll(address _owner, address _operator) external view returns (bool);
 }

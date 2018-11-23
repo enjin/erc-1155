@@ -41,4 +41,16 @@ contract ERC1155MockReceiver {
             return ERC1155_RECEIVED;
         }
     }
+
+    function onERC1155BatchReceived(address _operator, address _from, uint256[] _ids, uint256[] _values, bytes _data) external returns(bytes4) {
+        lastOperator = _operator;
+        lastId = _ids[0];
+        lastValue = _values[0];
+        lastData = _data;
+        if (shouldReject == true) {
+            return bytes4(_from); // Some random value
+        } else {
+            return ERC1155_RECEIVED;
+        }
+    }
 }
