@@ -73,13 +73,7 @@ contract ERC1155 is IERC1155, ERC165
         balances[_id][_from] = balances[_id][_from].sub(_value);
         balances[_id][_to]   = _value.add(balances[_id][_to]);
 
-        uint256[] memory ids = new uint256[](1);
-        ids[0] = _id;
-
-        uint256[] memory values = new uint256[](1);
-        values[0] = _value;
-
-        emit Transfer(msg.sender, _from, _to, ids, values);
+        emit TransferSingle(msg.sender, _from, _to, _id, _value);
 
         if (_to.isContract()) {
             require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED);
@@ -120,7 +114,7 @@ contract ERC1155 is IERC1155, ERC165
             balances[id][_to] = value.add(balances[id][_to]);
         }
 
-        emit Transfer(msg.sender, _from, _to, _ids, _values);
+        emit TransferBatch(msg.sender, _from, _to, _ids, _values);
 
         if (_to.isContract()) {
             require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_RECEIVED);

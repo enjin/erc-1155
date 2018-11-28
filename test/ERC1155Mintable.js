@@ -66,12 +66,12 @@ function verifyURI(tx, id, uri) {
 function verifyTransferEvent(tx, id, from, to, quantity, operator) {
     let eventCount = 0;
     for (let l of tx.logs) {
-        if (l.event === 'Transfer') {
+        if (l.event === 'TransferSingle') {
             assert(l.args._operator === operator, "Operator mis-match");
             assert(l.args._from === from, "from mis-match");
             assert(l.args._to === to, "to mis-match");
-            assert(l.args._ids[0].toNumber() === id, "id mis-match");
-            assert(l.args._values[0].toNumber() === quantity, "quantity mis-match");
+            assert(l.args._id.eq(id), "id mis-match");
+            assert(l.args._value.eq(quantity), "quantity mis-match");
             eventCount += 1;
         }
     }
@@ -104,24 +104,27 @@ async function testSafeTransferFrom(operator, from, to, id, quantity, data) {
 
 function verifyTransferEvents(tx, ids, from, to, quantities, operator) {
 
-    //Make sure we have a transfer event representing the whole transfer.
+    // Make sure we have a transfer event representing the whole transfer.
+    // ToDo: Should really match the deltas, not the exact ids/events
     let totalIdCount = 0;
     for (let l of tx.logs) {
         // Match transfer _from->_to
-        if (l.event === 'Transfer' &&
+        if (l.event === 'TransferBatch' &&
             l.args._operator === operator &&
             l.args._from === from &&
             l.args._to === to) {
             // Match payload.
             for (let j = 0; j < ids.length; ++j) {
-                if (l.args._ids[j].toNumber() === ids[j] && l.args._values[j].toNumber() == quantities[j]) {
+                let id = new BigNumber(l.args._ids[j]);
+                let value = new BigNumber(l.args._values[j]);
+                if (id.eq(ids[j]) && value.eq(quantities[j])) {
                      ++totalIdCount;
                 }
             }
          }
      }
 
-    assert(totalIdCount === ids.length, 'Unexpected number of Transfer events');
+    assert(totalIdCount === ids.length, 'Unexpected number of Transfer events found ' + totalIdCount + ' expected ' + ids.length);
 }
 
 async function testSafeBatchTransferFrom(operator, from, to, ids, quantities, data) {
@@ -178,7 +181,7 @@ contract('ERC1155Mintable', (accounts) => {
         // Also fetch the created id.
         function verifyCreateTransfer(tx, value, creator) {
             for (let l of tx.logs) {
-                if (l.event === 'Transfer') {
+                if (l.event === 'TransferSingle') {
                     assert(l.args._operator === creator);
                     // This signifies minting.
                     assert(l.args._from === zeroAddress);
@@ -187,14 +190,14 @@ contract('ERC1155Mintable', (accounts) => {
                         // Note that this is implementation specific,
                         // You could assign the initial balance to any address..
                         assert(l.args._to === creator);
-                        assert(l.args._values[0].toNumber() === value);
+                        assert(l.args._value.eq(value));
                     } else {
                         // It is ok to create a new id w/o a balance.
                         // Then _to should be 0x0
                         assert(l.args._to === zeroAddress);
-                        assert(l.args._values[0].toNumber() === 0);
+                        assert(l.args._value.eq(0));
                     }
-                    return l.args._ids[0].toNumber();
+                    return l.args._id;
                 }
             }
             assert(false, 'Did not find initial Transfer event');

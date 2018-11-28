@@ -34,14 +34,8 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
         // This will allow restricted access to creators.
         creators[_type] = msg.sender;
 
-        uint256[] memory ids = new uint256[](1);
-        ids[0] = _type;
-
-        uint256[] memory values = new uint256[](1);
-        values[0] = 0;
-
         // emit a Transfer event with Create semantic to help with discovery.
-        emit Transfer(msg.sender, 0x0, 0x0, ids, values);
+        emit TransferSingle(msg.sender, 0x0, 0x0, _type, 0);
 
         if (bytes(_name).length > 0)
             emit Name(_name, _type);
@@ -56,10 +50,6 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
         // creatorOnly() will only let a type pass through.
         require(isNonFungible(_type));
 
-        uint256[] memory ids = new uint256[](1);
-        uint256[] memory values = new uint256[](1);
-        values[0] = 1;
-
         // Index are 1-based.
         uint256 index = maxIndex[_type] + 1;
 
@@ -72,8 +62,7 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
             // You could use base-type id to store NF type balances if you wish.
             // balances[_type][dst] = quantity.add(balances[_type][dst]);
 
-            ids[0] = id;
-            emit Transfer(msg.sender, 0x0, dst, ids, values);
+            emit TransferSingle(msg.sender, 0x0, dst, id, 1);
 
             if (dst.isContract()) {
                 require(IERC1155TokenReceiver(dst).onERC1155Received(msg.sender, msg.sender, id, 1, '') == ERC1155_RECEIVED);
@@ -87,11 +76,6 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
 
         require(isFungible(_id));
 
-        uint256[] memory ids = new uint256[](1);
-        ids[0] = _id;
-
-        uint256[] memory values = new uint256[](1);
-
         for (uint256 i = 0; i < _to.length; ++i) {
 
             address to = _to[i];
@@ -103,8 +87,7 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
             // Emit the Transfer/Mint event.
             // the 0x0 source address implies a mint
             // It will also provide the circulating supply info.
-            values[0] = quantity;
-            emit Transfer(msg.sender, 0x0, to, ids, values);
+            emit TransferSingle(msg.sender, 0x0, to, _id, quantity);
 
             if (to.isContract()) {
                 require(IERC1155TokenReceiver(to).onERC1155Received(msg.sender, msg.sender, _id, quantity, '') == ERC1155_RECEIVED);
