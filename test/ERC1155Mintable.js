@@ -5,6 +5,7 @@ const expectThrow = require('./helpers/expectThrow');
 
 const ERC1155Mintable = artifacts.require('ERC1155Mintable.sol');
 const ERC1155MockReceiver = artifacts.require('ERC1155MockReceiver.sol');
+const { utf8ToHex, toBN } = web3.utils;
 
 let user1;
 let user2;
@@ -70,7 +71,7 @@ function verifyTransferEvent(tx, id, from, to, quantity, operator) {
             assert(l.args._from === from, "from mis-match");
             assert(l.args._to === to, "to mis-match");
             assert(l.args._id.eq(id), "id mis-match");
-            assert(l.args._value.eq(quantity), "quantity mis-match");
+            assert(l.args._value.eqn(quantity), "quantity mis-match");
             eventCount += 1;
         }
     }
@@ -93,8 +94,8 @@ async function testSafeTransferFrom(operator, from, to, id, quantity, data) {
     let postBalanceTo   = await mainContract.balanceOf(to, id);
 
     if (from !== to){
-        assert.strictEqual(preBalanceFrom.sub(quantity).toNumber(),postBalanceFrom.toNumber());
-        assert.strictEqual(preBalanceTo.add(quantity).toNumber(), postBalanceTo.toNumber());
+        assert.strictEqual(preBalanceFrom.subn(quantity).toNumber(),postBalanceFrom.toNumber());
+        assert.strictEqual(preBalanceTo.addn(quantity).toNumber(), postBalanceTo.toNumber());
     } else {
         // When from === to, just make sure there is no change in balance.
         assert.strictEqual(preBalanceFrom.toNumber(), postBalanceFrom.toNumber());
@@ -114,16 +115,16 @@ function verifyTransferEvents(tx, ids, from, to, quantities, operator) {
             l.args._to === to) {
             // Match payload.
             for (let j = 0; j < ids.length; ++j) {
-                let id = new BigNumber(l.args._ids[j]);
-                let value = new BigNumber(l.args._values[j]);
-                if (id.eq(ids[j]) && value.eq(quantities[j])) {
+                let id = l.args._ids[j];
+                let value = l.args._values[j];
+                if (id.eq(ids[j]) && value.eqn(quantities[j])) {
                      ++totalIdCount;
                 }
             }
          }
      }
 
-    assert(totalIdCount === ids.length, 'Unexpected number of Transfer events found ' + totalIdCount + ' expected ' + ids.length);
+    assert(totalIdCount === ids.length, 'Unexpected number of TransferBatch ids found ' + totalIdCount + ' expected ' + ids.length);
 }
 
 async function testSafeBatchTransferFrom(operator, from, to, ids, quantities, data) {
@@ -153,8 +154,8 @@ async function testSafeBatchTransferFrom(operator, from, to, ids, quantities, da
 
     for (let i = 0; i < ids.length; ++i) {
         if (from !== to){
-            assert.strictEqual(preBalanceFrom[i].sub(quantities[i]).toNumber(), postBalanceFrom[i].toNumber());
-            assert.strictEqual(preBalanceTo[i].add(quantities[i]).toNumber(), postBalanceTo[i].toNumber());
+            assert.strictEqual(preBalanceFrom[i].subn(quantities[i]).toNumber(), postBalanceFrom[i].toNumber());
+            assert.strictEqual(preBalanceTo[i].addn(quantities[i]).toNumber(), postBalanceTo[i].toNumber());
         } else {
             assert.strictEqual(preBalanceFrom[i].toNumber(), postBalanceFrom[i].toNumber());
         }
@@ -189,12 +190,12 @@ contract('ERC1155Mintable', (accounts) => {
                         // Note that this is implementation specific,
                         // You could assign the initial balance to any address..
                         assert(l.args._to === creator);
-                        assert(l.args._value.eq(value));
+                        assert(l.args._value.eqn(value));
                     } else {
                         // It is ok to create a new id w/o a balance.
                         // Then _to should be 0x0
                         assert(l.args._to === zeroAddress);
-                        assert(l.args._value.eq(0));
+                        assert(l.args._value.eqn(0));
                     }
                     return l.args._id;
                 }
@@ -235,97 +236,97 @@ contract('ERC1155Mintable', (accounts) => {
     });
 
     it('safeTransferFrom throws with no balance', async () => {
-        await expectThrow(mainContract.safeTransferFrom(user2, user1, hammerId, 1, '', {from: user2}));
+        await expectThrow(mainContract.safeTransferFrom(user2, user1, hammerId, 1, utf8ToHex(''), {from: user2}));
     });
 
     it('safeTransferFrom throws with invalid id', async () => {
-        await expectThrow(mainContract.safeTransferFrom(user2, user1, 32, 1, '', {from: user2}));
+        await expectThrow(mainContract.safeTransferFrom(user2, user1, 32, 1, utf8ToHex(''), {from: user2}));
     });
 
     it('safeTransferFrom throws with no approval', async () => {
-        await expectThrow(mainContract.safeTransferFrom(user1, user2, hammerId, 1, '', {from: user2}));
+        await expectThrow(mainContract.safeTransferFrom(user1, user2, hammerId, 1, utf8ToHex(''), {from: user2}));
     });
 
     it('safeTransferFrom throws when exceeding balance', async () => {
-        await expectThrow(mainContract.safeTransferFrom(user1, user2, hammerId, 6, '', {from: user1}));
+        await expectThrow(mainContract.safeTransferFrom(user1, user2, hammerId, 6, utf8ToHex(''), {from: user1}));
     });
 
     it('safeTransferFrom throws when sending to non-receiver contract', async () => {
-        await expectThrow(mainContract.safeTransferFrom(user1, mainContract.address, hammerId, 1, '', {from: user1}));
+        await expectThrow(mainContract.safeTransferFrom(user1, mainContract.address, hammerId, 1, utf8ToHex(''), {from: user1}));
     });
 
     it('safeTransferFrom throws if invalid response from receiver contract', async () => {
         await receiverContract.setShouldReject(true);
-        await expectThrow(mainContract.safeTransferFrom(user1, receiverContract.address, hammerId, 1, 'Bob', {from: user1}));
+        await expectThrow(mainContract.safeTransferFrom(user1, receiverContract.address, hammerId, 1, utf8ToHex('Bob'), {from: user1}));
     });
 
     it('safeTransferFrom from self with enough balance', async () => {
-        await testSafeTransferFrom(user1, user1, user2, hammerId, 1, '');
-        await testSafeTransferFrom(user2, user2, user1, hammerId, 1, '');
+        await testSafeTransferFrom(user1, user1, user2, hammerId, 1, utf8ToHex(''));
+        await testSafeTransferFrom(user2, user2, user1, hammerId, 1, utf8ToHex(''));
   });
 
     it('safeTransferFrom to self with enough balance', async () => {
-        await testSafeTransferFrom(user1, user1, user1, hammerId, 1, '');
+        await testSafeTransferFrom(user1, user1, user1, hammerId, 1, utf8ToHex(''));
     });
 
     it('safeTransferFrom zero value', async () => {
-        await testSafeTransferFrom(user3, user3, user1, hammerId, 0, '');
+        await testSafeTransferFrom(user3, user3, user1, hammerId, 0, utf8ToHex(''));
     });
 
     it('safeTransferFrom from approved operator', async () => {
         await mainContract.setApprovalForAll(user3, true, {from:user1});
-        await testSafeTransferFrom(user3, user1, user2, hammerId, 1, '');
+        await testSafeTransferFrom(user3, user1, user2, hammerId, 1, utf8ToHex(''));
         await mainContract.setApprovalForAll(user3, false,{from:user1});
 
         // Restore state
         await mainContract.setApprovalForAll(user3, true,{ from:user2});
-        await testSafeTransferFrom(user3, user2, user1, hammerId, 1, '');
+        await testSafeTransferFrom(user3, user2, user1, hammerId, 1, utf8ToHex(''));
         await mainContract.setApprovalForAll(user3, false, {from:user2});
     });
 
     it('safeTransferFrom to reciever contract', async () => {
         await receiverContract.setShouldReject(false);
-        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, 'SomethingMeaningfull');
+        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, utf8ToHex('SomethingMeaningfull'));
 
         // ToDo restore state
     });
 
     it('safeBatchTransferFrom throws with insuficient balance', async () => {
-        await expectThrow(mainContract.safeBatchTransferFrom(user2, user1, idSet, quantities, '', {from: user2}));
+        await expectThrow(mainContract.safeBatchTransferFrom(user2, user1, idSet, quantities, utf8ToHex(''), {from: user2}));
     });
 
     it('safeBatchTransferFrom throws with invalid id', async () => {
-        await expectThrow(mainContract.safeBatchTransferFrom(user1, user2, [32, swordId, maceId], quantities, '', {from: user1}));
+        await expectThrow(mainContract.safeBatchTransferFrom(user1, user2, [32, swordId, maceId], quantities, utf8ToHex(''), {from: user1}));
     });
 
     it('safeBatchTransferFrom throws with no approval', async () => {
-        await expectThrow(mainContract.safeBatchTransferFrom(user1, user3, idSet, quantities, '', {from: user2}));
+        await expectThrow(mainContract.safeBatchTransferFrom(user1, user3, idSet, quantities, utf8ToHex(''), {from: user2}));
     });
 
     it('safeBatchTransferFrom throws when exceeding balance', async () => {
-        await expectThrow(mainContract.safeBatchTransferFrom(user1, user2, idSet, [6,1,1], '', {from: user1}));
+        await expectThrow(mainContract.safeBatchTransferFrom(user1, user2, idSet, [6,1,1], utf8ToHex(''), {from: user1}));
     });
 
     it('safeBatchTransferFrom throws when sending to a non-receiver contract', async () => {
-        await expectThrow(mainContract.safeBatchTransferFrom(user1, mainContract.address, idSet, quantities, '', {from: user1}));
+        await expectThrow(mainContract.safeBatchTransferFrom(user1, mainContract.address, idSet, quantities, utf8ToHex(''), {from: user1}));
     });
 
     it('safeBatchTransferFrom throws with invalid reciever contract reply', async () => {
         await receiverContract.setShouldReject(true);
-        await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, '', {from: user1}));
+        await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, utf8ToHex(''), {from: user1}));
     });
 
     it('safeBatchTransferFrom from self with enough balance', async () => {
-        await testSafeBatchTransferFrom(user1, user1, user2, idSet, quantities, '');
-        await testSafeBatchTransferFrom(user2, user2, user1, idSet, quantities, '');
+        await testSafeBatchTransferFrom(user1, user1, user2, idSet, quantities, utf8ToHex(''));
+        await testSafeBatchTransferFrom(user2, user2, user1, idSet, quantities, utf8ToHex(''));
     });
 
     it('safeBatchTransferFrom to self with enough balance', async () => {
-        await testSafeBatchTransferFrom(user1, user1, user1, idSet, quantities, '');
+        await testSafeBatchTransferFrom(user1, user1, user1, idSet, quantities, utf8ToHex(''));
     });
 
     it('safeBatchTransferFrom zero quantity with zero balance', async () => {
-        await testSafeBatchTransferFrom(user3, user3, user1, idSet, [0,0,0], '');
+        await testSafeBatchTransferFrom(user3, user3, user1, idSet, [0,0,0], utf8ToHex(''));
     });
 
     // ToDo safeBatchTransferFrom
