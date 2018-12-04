@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 // Contract to test safe transfer behavior.
 contract ERC1155MockReceiver {
@@ -30,25 +30,25 @@ contract ERC1155MockReceiver {
         @param _data      Additional data with no specified format
         @return           `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`
     */
-    function onERC1155Received(address _operator, address _from, uint256 _id, uint256 _value, bytes _data) external returns(bytes4) {
+    function onERC1155Received(address _operator, address _from, uint256 _id, uint256 _value, bytes calldata _data) external returns(bytes4) {
         lastOperator = _operator;
         lastId = _id;
         lastValue = _value;
         lastData = _data;
         if (shouldReject == true) {
-            return bytes4(_from); // Some random value
+            return bytes4(uint32(_from)); // Some random value
         } else {
             return ERC1155_RECEIVED;
         }
     }
 
-    function onERC1155BatchReceived(address _operator, address _from, uint256[] _ids, uint256[] _values, bytes _data) external returns(bytes4) {
+    function onERC1155BatchReceived(address _operator, address _from, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external returns(bytes4) {
         lastOperator = _operator;
         lastId = _ids[0];
         lastValue = _values[0];
         lastData = _data;
         if (shouldReject == true) {
-            return bytes4(_from); // Some random value
+            return bytes4(bytes20(_from)); // Some random value
         } else {
             return ERC1155_RECEIVED;
         }
