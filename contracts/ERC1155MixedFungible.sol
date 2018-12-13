@@ -97,7 +97,7 @@ contract ERC1155MixedFungible is ERC1155 {
         emit TransferBatch(msg.sender, _from, _to, _ids, _values);
 
         if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_RECEIVED);
+            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_BATCH_RECEIVED);
         }
     }
 
@@ -105,5 +105,22 @@ contract ERC1155MixedFungible is ERC1155 {
         if (isNonFungibleItem(_id))
             return nfOwners[_id] == _owner ? 1 : 0;
         return balances[_id][_owner];
+    }
+
+    function balanceOfBatch(address[] _owners, uint256[] _ids) external view returns (uint256[]) {
+
+        require(_owners.length == _ids.length);
+
+        uint256[] memory balances_ = new uint256[](_owners.length);
+
+        for (uint256 i = 0; i < _owners.length; ++i) {
+            uint256 id = _ids[i];
+            if (isNonFungibleItem(id)) {
+                balances_[i] = nfOwners[id] == _owners[i] ? 1 : 0;
+            }
+            balances_[i] = balances[id][_owners[i]];
+        }
+
+        return balances_;
     }
 }
