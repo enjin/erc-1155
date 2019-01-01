@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./ERC1155.sol";
 
@@ -47,9 +47,9 @@ contract ERC1155MixedFungible is ERC1155 {
     }
 
     // overide
-    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external {
+    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes calldata _data) external {
 
-        require(_to != 0);
+        require(_to != address(0x0), "cannot send to zero address");
         require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
         if (isNonFungible(_id)) {
@@ -72,9 +72,9 @@ contract ERC1155MixedFungible is ERC1155 {
     }
 
     // overide
-    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external {
+    function safeBatchTransferFrom(address _from, address _to, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external {
 
-        require(_to != 0, "cannot send to zero address");
+        require(_to != address(0x0), "cannot send to zero address");
         require(_ids.length == _values.length, "Array length must match");
 
         // Only supporting a global operator approval allows us to do only 1 check and not to touch storage to handle allowances.
@@ -107,7 +107,7 @@ contract ERC1155MixedFungible is ERC1155 {
         return balances[_id][_owner];
     }
 
-    function balanceOfBatch(address[] _owners, uint256[] _ids) external view returns (uint256[]) {
+    function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids) external view returns (uint256[] memory) {
 
         require(_owners.length == _ids.length);
 

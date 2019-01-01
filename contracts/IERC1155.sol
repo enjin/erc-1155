@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./ERC165.sol";
 
@@ -48,7 +48,7 @@ interface IERC1155 /* is ERC165 */ {
         @param _value   Transfer amount
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external;
+    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes calldata _data) external;
 
     /**
         @notice Send multiple types of Tokens from a 3rd party in one transfer (with safety call).
@@ -64,7 +64,7 @@ interface IERC1155 /* is ERC165 */ {
         @param _values  Transfer amounts per token type
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external;
+    function safeBatchTransferFrom(address _from, address _to, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external;
 
     /**
         @notice Get the balance of an account's Tokens.
@@ -80,7 +80,7 @@ interface IERC1155 /* is ERC165 */ {
         @param _ids    ID of the Tokens
         @return        The _owner's balance of the Token types requested
      */
-    function balanceOfBatch(address[] _owners, uint256[] _ids) external view returns (uint256[]);
+    function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids) external view returns (uint256[] memory);
 
     /**
         @notice Enable or disable approval for a third party ("operator") to manage all of the caller's tokens.

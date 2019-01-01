@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./IERC1155.sol";
 import "./ERC165.sol";
@@ -62,7 +62,7 @@ contract AllowanceWrapper is IERC1155, ERC165
     external
     view
     returns (bool) {
-         ERC165(targetContract).supportsInterface(_interfaceId);
+         ERC165(address(targetContract)).supportsInterface(_interfaceId);
     }
 
     /**
@@ -78,7 +78,7 @@ contract AllowanceWrapper is IERC1155, ERC165
         @param _value   transfer amounts
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes _data) external /*payable*/  {
+    function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes calldata _data) external /*payable*/  {
         if (msg.sender != _from) {
             allowances[_from][msg.sender][_id] = allowances[_from][msg.sender][_id].sub(_value);
         }
@@ -96,7 +96,7 @@ contract AllowanceWrapper is IERC1155, ERC165
         @param _values  Transfer amounts per token type
         @param _data    Additional data with no specified format, sent in call to `_to`
     */
-    function safeBatchTransferFrom(address _from, address _to, uint256[] _ids, uint256[] _values, bytes _data) external /*payable*/ {
+    function safeBatchTransferFrom(address _from, address _to, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external /*payable*/ {
         if (msg.sender != _from) {
             for (uint256 i = 0; i < _ids.length; ++i) {
                 allowances[_from][msg.sender][_ids[i]] = allowances[_from][msg.sender][_ids[i]].sub(_values[i]);

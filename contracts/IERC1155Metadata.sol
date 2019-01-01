@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 interface IERC1155Metadata_URI {
     /**
@@ -6,7 +6,7 @@ interface IERC1155Metadata_URI {
         @dev URIs are defined in RFC 3986
         @return  URI string
     */
-    function uri(uint256 _id) external view returns (string);
+    function uri(uint256 _id) external view returns (string memory);
 }
 
 interface IERC1155Metadata_Name {
@@ -15,5 +15,5 @@ interface IERC1155Metadata_Name {
         @dev URIs are defined in RFC 3986
         @return  URI string
     */
-    function name(uint256 _id) external view returns (string);
+    function name(uint256 _id) external view returns (string memory);
 }

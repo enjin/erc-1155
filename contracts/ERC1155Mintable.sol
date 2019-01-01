@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.5.0;
 
 import "./ERC1155.sol";
 
@@ -20,14 +20,14 @@ contract ERC1155Mintable is ERC1155 {
     }
 
     // Creates a new token type and assings _initialSupply to minter
-    function create(uint256 _initialSupply, string _name, string _uri) external returns(uint256 _id) {
+    function create(uint256 _initialSupply, string calldata _name, string calldata _uri) external returns(uint256 _id) {
 
         _id = ++nonce;
         creators[_id] = msg.sender;
         balances[_id][msg.sender] = _initialSupply;
 
         // Transfer event with mint semantic
-        emit TransferSingle(msg.sender, 0x0, msg.sender, _id, _initialSupply);
+        emit TransferSingle(msg.sender, address(0x0), msg.sender, _id, _initialSupply);
 
         if (bytes(_name).length > 0)
             emit Name(_name, _id);
@@ -37,7 +37,7 @@ contract ERC1155Mintable is ERC1155 {
     }
 
     // Batch mint tokens. Assign directly to _to[].
-    function mint(uint256 _id, address[] _to, uint256[] _quantities) external creatorOnly(_id) {
+    function mint(uint256 _id, address[] calldata _to, uint256[] calldata _quantities) external creatorOnly(_id) {
 
         for (uint256 i = 0; i < _to.length; ++i) {
 
@@ -50,7 +50,7 @@ contract ERC1155Mintable is ERC1155 {
             // Emit the Transfer/Mint event.
             // the 0x0 source address implies a mint
             // It will also provide the circulating supply info.
-            emit TransferSingle(msg.sender, 0x0, to, _id, quantity);
+            emit TransferSingle(msg.sender, address(0x0), to, _id, quantity);
 
             if (to.isContract()) {
                 require(IERC1155TokenReceiver(to).onERC1155Received(msg.sender, msg.sender, _id, quantity, '') == ERC1155_RECEIVED);
@@ -58,11 +58,11 @@ contract ERC1155Mintable is ERC1155 {
         }
     }
 
-    function setURI(string _uri, uint256 _id) external creatorOnly(_id) {
+    function setURI(string calldata _uri, uint256 _id) external creatorOnly(_id) {
         emit URI(_uri, _id);
     }
 
-    function setName(string _name, uint256 _id) external creatorOnly(_id) {
+    function setName(string calldata _name, uint256 _id) external creatorOnly(_id) {
         emit Name(_name, _id);
     }
 }
