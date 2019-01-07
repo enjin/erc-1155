@@ -78,7 +78,7 @@ contract ERC1155 is IERC1155, ERC165
         emit TransferSingle(msg.sender, _from, _to, _id, _value);
 
         if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED);
+            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED, "Receiver contract did not accept the transfer.");
         }
     }
 
@@ -99,7 +99,7 @@ contract ERC1155 is IERC1155, ERC165
     function safeBatchTransferFrom(address _from, address _to, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external {
 
         // MUST Throw on errors
-        require(_to != address(0x0), "_to must be non-zero.");
+        require(_to != address(0x0), "destination address must be non-zero.");
         require(_ids.length == _values.length, "_ids and _values array lenght must match.");
         require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
@@ -119,7 +119,7 @@ contract ERC1155 is IERC1155, ERC165
         // Now that the balances are updated,
         // call onERC1155BatchReceived if the destination is a contract
         if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_BATCH_RECEIVED);
+            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_BATCH_RECEIVED, "Receiver contract did not accept the transfer.");
         }
     }
 
