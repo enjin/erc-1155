@@ -19,7 +19,6 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
 
     // This function only creates the type.
     function create(
-        string calldata _name,
         string calldata _uri,
         bool   _isNF)
     external returns(uint256 _type) {
@@ -36,9 +35,6 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
 
         // emit a Transfer event with Create semantic to help with discovery.
         emit TransferSingle(msg.sender, address(0x0), address(0x0), _type, 0);
-
-        if (bytes(_name).length > 0)
-            emit Name(_name, _type);
 
         if (bytes(_uri).length > 0)
             emit URI(_uri, _type);

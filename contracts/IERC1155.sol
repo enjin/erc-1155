@@ -10,12 +10,22 @@ import "./ERC165.sol";
 interface IERC1155 /* is ERC165 */ {
     /**
         @dev Either TransferSingle or TransferBatch MUST emit when tokens are transferred, including zero value transfers as well as minting or burning.
+        Operator will always be msg.sender.
         Either event from address `0x0` signifies a minting operation.
         An event to address `0x0` signifies a burning or melting operation.
-        The total value transferred from address 0x0 minus the total value transferred to 0x0 may be used by clients and exchanges to be added to the "circulating supply" for a given token ID
-        This MAY emit a 0 value, from `0x0` to `0x0` with `_operator` assuming the role of the token creator to define a token ID with no initial balance at the time of creation.
+        The total value transferred from address 0x0 minus the total value transferred to 0x0 may be used by clients and exchanges to be added to the "circulating supply" for a given token ID.
+        To define a token ID with no initial balance, the contract SHOULD emit the TransferSingle event from `0x0` to `0x0`, with the token creator as `_operator`.
     */
     event TransferSingle(address indexed _operator, address indexed _from, address indexed _to, uint256 _id, uint256 _value);
+
+    /**
+        @dev Either TransferSingle or TransferBatch MUST emit when tokens are transferred, including zero value transfers as well as minting or burning.
+        Operator will always be msg.sender.
+        Either event from address `0x0` signifies a minting operation.
+        An event to address `0x0` signifies a burning or melting operation.
+        The total value transferred from address 0x0 minus the total value transferred to 0x0 may be used by clients and exchanges to be added to the "circulating supply" for a given token ID.
+        To define multiple token IDs with no initial balance, this SHOULD emit the TransferBatch event from `0x0` to `0x0`, with the token creator as `_operator`.
+    */
     event TransferBatch(address indexed _operator, address indexed _from, address indexed _to, uint256[] _ids, uint256[] _values);
 
     /**
@@ -25,25 +35,21 @@ interface IERC1155 /* is ERC165 */ {
 
     /**
         @dev MUST emit when the URI is updated for a token ID.
+        URIs are defined in RFC 3986.
         The URI MUST point a JSON file that conforms to the "ERC-1155 Metadata JSON Schema".
     */
     event URI(string _value, uint256 indexed _id);
 
     /**
-        @dev MUST emit when the Name is updated for a token ID.
-    */
-    event Name(string _value, uint256 indexed _id);
-
-    /**
-        @notice Transfers value amount of an _id from the _from address to the _to addresses specified. Each parameter array should be the same length, with each index correlating.
+        @notice Transfers value amount of an _id from the _from address to the _to address specified.
         @dev MUST emit TransferSingle event on success.
         Caller must be approved to manage the _from account's tokens (see isApprovedForAll).
-        MUST Throw if `_to` is the zero address.
-        MUST Throw if `_id` is not a valid token ID.
-        MUST Throw on any other error.
+        MUST throw if `_to` is the zero address.
+        MUST throw if balance of sender for token `_id` is lower than the `_value` sent.
+        MUST throw on any other error.
         When transfer is complete, this function MUST check if `_to` is a smart contract (code size > 0). If so, it MUST call `onERC1155Received` on `_to` and revert if the return value is not `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`.
-        @param _from    Source addresses
-        @param _to      Target addresses
+        @param _from    Source address
+        @param _to      Target address
         @param _id      ID of the token type
         @param _value   Transfer amount
         @param _data    Additional data with no specified format, sent in call to `_to`
@@ -54,12 +60,13 @@ interface IERC1155 /* is ERC165 */ {
         @notice Send multiple types of Tokens from a 3rd party in one transfer (with safety call).
         @dev MUST emit TransferBatch event on success.
         Caller must be approved to manage the _from account's tokens (see isApprovedForAll).
-        MUST Throw if `_to` is the zero address.
-        MUST Throw if any of the `_ids` is not a valid token ID.
-        MUST Throw on any other error.
+        MUST throw if `_to` is the zero address.
+        MUST throw if length of `_ids` is not the same as length of `_values`.
+        MUST throw if any of the balance of sender for token `_ids` is lower than the respective `_values` sent.
+        MUST throw on any other error.
         When transfer is complete, this function MUST check if `_to` is a smart contract (code size > 0). If so, it MUST call `onERC1155BatchReceived` on `_to` and revert if the return value is not `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`.
-        @param _from    Source address
-        @param _to      Target address
+        @param _from    Source addresses
+        @param _to      Target addresses
         @param _ids     IDs of each token type
         @param _values  Transfer amounts per token type
         @param _data    Additional data with no specified format, sent in call to `_to`

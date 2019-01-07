@@ -10,6 +10,7 @@ const BigNumber = require('bignumber.js');
 let user1;
 let user2;
 let user3;
+let user4;
 let mainContract;
 let receiverContract;
 let tx;
@@ -41,18 +42,7 @@ function printGasUsed() {
     console.log('------------------------------------------------------------');
 }
 
-function verifyName(tx, id, name) {
-    for (let l of tx.logs) {
-        if (l.event === 'Name') {
-            assert(l.args._id.eq(id));
-            assert(l.args._value === name);
-            return;
-        }
-    }
-    assert(false, 'Did not find Name event');
-}
-
-function verifyURI(tx, id, uri) {
+function verifyURI(tx, uri, id) {
     for (let l of tx.logs) {
         if (l.event === 'URI') {
             assert(l.args._id.eq(id));
@@ -162,11 +152,12 @@ async function testSafeBatchTransferFrom(operator, from, to, ids, quantities, da
     }
 }
 
-contract('ERC1155Mintable', (accounts) => {
+contract('ERC1155Mintable - tests all core 1155 functionality.', (accounts) => {
     before(async () => {
         user1 = accounts[1];
         user2 = accounts[2];
         user3 = accounts[3];
+        user4 = accounts[4];
         mainContract = await ERC1155Mintable.new();
         receiverContract = await ERC1155MockReceiver.new();
     });
@@ -175,7 +166,7 @@ contract('ERC1155Mintable', (accounts) => {
         printGasUsed();
     });
 
-    it('Mint initial items', async () => {
+    it('Create initial items', async () => {
 
         // Make sure the Transfer event respects the create or mint spec.
         // Also fetch the created id.
@@ -204,35 +195,29 @@ contract('ERC1155Mintable', (accounts) => {
         }
 
         let hammerQuantity = 5;
-        let hammerName = 'Hammer';
         let hammerUri = 'https://metadata.enjincoin.io/hammer.json';
-        tx = await mainContract.create(hammerQuantity, hammerName, hammerUri, {from: user1});
+        tx = await mainContract.create(hammerQuantity, hammerUri, {from: user1});
         hammerId = verifyCreateTransfer(tx, hammerQuantity, user1);
         idSet.push(hammerId);
 
         // This is implementation-specific,
-        // but we choose to name and add an URI on creation.
-        // Make sure the Name and URI event is emited correctly.
-        verifyName(tx, hammerId, hammerName);
-        verifyURI(tx, hammerId, hammerUri);
+        // but we choose to add an URI on creation.
+        // Make sure the URI event is emited correctly.
+        verifyURI(tx, hammerUri, hammerId);
 
         let swordQuantity = 200;
-        let swordName = 'Sword';
         let swordUri = 'https://metadata.enjincoin.io/sword.json';
-        tx = await mainContract.create(swordQuantity, swordName, swordUri, {from: user1});
+        tx = await mainContract.create(swordQuantity, swordUri, {from: user1});
         swordId = verifyCreateTransfer(tx, swordQuantity, user1);
         idSet.push(swordId);
-        verifyName(tx, swordId, swordName);
-        verifyURI(tx, swordId, swordUri);
+        verifyURI(tx, swordUri, swordId);
 
         let maceQuantity = 1000000;
-        let macedName = 'Mace';
         let maceUri = 'https://metadata.enjincoin.io/mace.json';
-        tx = await mainContract.create(maceQuantity, macedName, maceUri, {from: user1});
+        tx = await mainContract.create(maceQuantity, maceUri, {from: user1});
         maceId = verifyCreateTransfer(tx, maceQuantity, user1);
         idSet.push(maceId);
-        verifyName(tx, maceId, macedName);
-        verifyURI(tx, maceId, maceUri);
+        verifyURI(tx, maceUri, maceId);
     });
 
     it('safeTransferFrom throws with no balance', async () => {
@@ -316,9 +301,23 @@ contract('ERC1155Mintable', (accounts) => {
         await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1}));
     });
 
+    it('safeBatchTransferFrom ok with valid reciever contract reply', async () => {
+        await receiverContract.setShouldReject(false);
+        await mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1});
+    });
+
     it('safeBatchTransferFrom from self with enough balance', async () => {
         await testSafeBatchTransferFrom(user1, user1, user2, idSet, quantities, web3.utils.fromAscii(''));
         await testSafeBatchTransferFrom(user2, user2, user1, idSet, quantities, web3.utils.fromAscii(''));
+    });
+
+    it('safeBatchTransferFrom by operator with enough balance', async () => {
+        await mainContract.setApprovalForAll(user3, true, {from: user1});
+        await mainContract.setApprovalForAll(user3, true, {from: user2});
+        await testSafeBatchTransferFrom(user3, user1, user2, idSet, quantities, web3.utils.fromAscii(''));
+        await testSafeBatchTransferFrom(user3, user2, user1, idSet, quantities, web3.utils.fromAscii(''));
+        await mainContract.setApprovalForAll(user3, false, {from: user1});
+        await mainContract.setApprovalForAll(user3, false, {from: user2});
     });
 
     it('safeBatchTransferFrom to self with enough balance', async () => {
@@ -329,15 +328,85 @@ contract('ERC1155Mintable', (accounts) => {
         await testSafeBatchTransferFrom(user3, user3, user1, idSet, [0,0,0], web3.utils.fromAscii(''));
     });
 
-    // ToDo safeBatchTransferFrom
-    // From approved 3rd party.
-    // From approved 3rd part with approval
-    // To receiver contract is ok if contract accept.
+    // ToDo test event setApprovalForAll
+    it('safeBatchTransferFrom by operator with enough balance', async () => {
 
-    // ToDo safeMulticastTransferFrom tests
+        function verifySetApproval(tx, operator, owner, approved) {
+            for (let l of tx.logs) {
+                if (l.event === 'ApprovalForAll') {
+                    assert(l.args._operator === operator);
+                    assert(l.args._owner === owner);
+                    assert(l.args._approved === approved);
+                    return;
+                }
+            }
+            assert(false, 'Did not find ApprovalForAll event');
+        }
 
-    // ToDo isApprovedForAll tests
+        tx = await mainContract.setApprovalForAll(user3, true, {from: user1});
+        verifySetApproval(tx, user3, user1, true);
 
-    // ToDo setURI
-    // ToDo setName
+        tx = await mainContract.setApprovalForAll(user3, false, {from: user1});
+        verifySetApproval(tx, user3, user1, false);
+    });
+
+    it('balanaceOfBatch - fails on array length mismatch', async () => {
+        let accounts = [ user1 ];
+        let ids      = [ hammerId, swordId ];
+
+        await expectThrow(mainContract.balanceOfBatch(accounts, ids));
+    });
+
+    it('balanaceOfBatch - matches individual balances', async () => {
+        let accounts = [ user1, user1, user1, user2, user2, user2, user3, user3, user3, user4 ];
+        let ids      = [ hammerId, swordId, maceId, hammerId, swordId, maceId, hammerId, swordId, maceId, hammerId ];
+
+        let balances = await mainContract.balanceOfBatch(accounts, ids);
+
+        for (let i = 0; i < ids.length; i++) {
+            let balance = await mainContract.balanceOf(accounts[i], ids[i]);
+            assert(balance.toNumber() === balances[i].toNumber());
+        }
+    });
+
+    it('ERC1165 - returns false on non-supported insterface', async () => {
+        let someRandomInterface = '0xd9b67a25';
+        assert(await mainContract.supportsInterface(someRandomInterface) === false);
+    });
+
+    it('ERC1165 - supportsInterface: ERC165', async () => {
+        let erc165interface = '0x01ffc9a7';
+        assert(await mainContract.supportsInterface(erc165interface) === true);
+    });
+
+    it('ERC1165 - supportsInterface: ERC1155', async () => {
+        let erc1155interface = '0xd9b67a26';
+        assert(await mainContract.supportsInterface(erc1155interface) === true);
+    });
+
+    it('ERC1165 - supportsInterface: URI', async () => {
+        let uriInterface = '0x0e89341c';
+        assert(await mainContract.supportsInterface(uriInterface) === true);
+    });
+
+    it('setURI only callable by minter (implementation specific)', async () => {
+        let newHammerUri = 'https://metadata.enjincoin.io/new_hammer.json';
+        await expectThrow(mainContract.setURI(newHammerUri, hammerId, {from: user2}));
+    });
+
+    it('setURI emits the right event', async () => {
+        let newHammerUri = 'https://metadata.enjincoin.io/new_hammer.json';
+        tx = await mainContract.setURI(newHammerUri, hammerId, {from: user1});
+        verifyURI(tx, newHammerUri, hammerId);
+    });
+
+    it('mint (implementation specific) - callable only from initial minter ()', async () => {
+        await expectThrow(mainContract.mint(hammerId, [user3], [1], {from: user2}));
+    });
+
+    it('mint (implementation specific) - fails on receiver contract invalid response - not tested', async () => {
+    });
+
+    it('mint (implementation specific) - emits a valid Transfer* event - not tested', async () => {
+    });
 });

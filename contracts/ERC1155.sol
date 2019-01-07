@@ -38,7 +38,7 @@ contract ERC1155 is IERC1155, ERC165
     bytes4 constant private INTERFACE_SIGNATURE_ERC1155 = 0xd9b67a26;
 
     function supportsInterface(bytes4 _interfaceId)
-    external
+    public
     view
     returns (bool) {
          if (_interfaceId == INTERFACE_SIGNATURE_ERC165 ||

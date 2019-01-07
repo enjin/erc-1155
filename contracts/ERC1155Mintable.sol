@@ -8,6 +8,8 @@ import "./ERC1155.sol";
 */
 contract ERC1155Mintable is ERC1155 {
 
+    bytes4 constant private INTERFACE_SIGNATURE_URI = 0x0e89341c;
+
     // id => creators
     mapping (uint256 => address) public creators;
 
@@ -19,8 +21,19 @@ contract ERC1155Mintable is ERC1155 {
         _;
     }
 
+    function supportsInterface(bytes4 _interfaceId)
+    public
+    view
+    returns (bool) {
+        if (_interfaceId == INTERFACE_SIGNATURE_URI) {
+            return true;
+        } else {
+            return super.supportsInterface(_interfaceId);
+        }
+    }
+
     // Creates a new token type and assings _initialSupply to minter
-    function create(uint256 _initialSupply, string calldata _name, string calldata _uri) external returns(uint256 _id) {
+    function create(uint256 _initialSupply, string calldata _uri) external returns(uint256 _id) {
 
         _id = ++nonce;
         creators[_id] = msg.sender;
@@ -28,9 +41,6 @@ contract ERC1155Mintable is ERC1155 {
 
         // Transfer event with mint semantic
         emit TransferSingle(msg.sender, address(0x0), msg.sender, _id, _initialSupply);
-
-        if (bytes(_name).length > 0)
-            emit Name(_name, _id);
 
         if (bytes(_uri).length > 0)
             emit URI(_uri, _id);
@@ -53,16 +63,12 @@ contract ERC1155Mintable is ERC1155 {
             emit TransferSingle(msg.sender, address(0x0), to, _id, quantity);
 
             if (to.isContract()) {
-                require(IERC1155TokenReceiver(to).onERC1155Received(msg.sender, msg.sender, _id, quantity, '') == ERC1155_RECEIVED);
+                require(IERC1155TokenReceiver(to).onERC1155Received(msg.sender, msg.sender, _id, quantity, '') == ERC1155_RECEIVED, "Receiver contract did not accept the transfer.");
             }
         }
     }
 
     function setURI(string calldata _uri, uint256 _id) external creatorOnly(_id) {
         emit URI(_uri, _id);
-    }
-
-    function setName(string calldata _name, uint256 _id) external creatorOnly(_id) {
-        emit Name(_name, _id);
     }
 }
