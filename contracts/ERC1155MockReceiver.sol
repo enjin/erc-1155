@@ -1,4 +1,4 @@
-pragma solidity ^0.5.0;
+pragma solidity ^0.5.3;
 
 // Contract to test safe transfer behavior.
 contract ERC1155MockReceiver {
