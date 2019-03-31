@@ -1,4 +1,4 @@
-pragma solidity ^0.5.4;
+pragma solidity ^0.5.0;
 
 import "./IERC1155.sol";
 import "./ERC165.sol";
