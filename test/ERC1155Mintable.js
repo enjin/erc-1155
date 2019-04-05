@@ -24,7 +24,6 @@ let maceId;
 let idSet = [];
 let quantities = [1, 1, 1];
 
-let gasUsed;
 let gasUsedRecords = [];
 let gasUsedTotal = 0;
 
@@ -71,13 +70,13 @@ function verifyTransferEvent(tx, id, from, to, quantity, operator) {
         assert(eventCount === 1, 'Unexpected number of Transfer events');
 }
 
-async function testSafeTransferFrom(operator, from, to, id, quantity, data) {
+async function testSafeTransferFrom(operator, from, to, id, quantity, data, gasMessage='testSafeTransferFrom') {
 
     let preBalanceFrom = new BigNumber(await mainContract.balanceOf(from, id));
     let preBalanceTo   = new BigNumber(await mainContract.balanceOf(to, id));
 
     tx = await mainContract.safeTransferFrom(from, to, id, quantity, data, {from: operator});
-    recordGasUsed(tx, 'safeTransferFrom');
+    recordGasUsed(tx, gasMessage);
     verifyTransferEvent(tx, id, from, to, quantity, operator);
 
     let postBalanceFrom = new BigNumber(await mainContract.balanceOf(from, id));
@@ -117,7 +116,7 @@ function verifyTransferEvents(tx, ids, from, to, quantities, operator) {
     assert(totalIdCount === ids.length, 'Unexpected number of Transfer events found ' + totalIdCount + ' expected ' + ids.length);
 }
 
-async function testSafeBatchTransferFrom(operator, from, to, ids, quantities, data) {
+async function testSafeBatchTransferFrom(operator, from, to, ids, quantities, data, gasMessage='testSafeBatchTransferFrom') {
 
     let preBalanceFrom = [];
     let preBalanceTo   = [];
@@ -129,7 +128,7 @@ async function testSafeBatchTransferFrom(operator, from, to, ids, quantities, da
     }
 
     tx = await mainContract.safeBatchTransferFrom(from, to, ids, quantities, data, {from: operator});
-    recordGasUsed(tx, 'safeBatchTransferFrom');
+    recordGasUsed(tx, gasMessage);
     verifyTransferEvents(tx, ids, from, to, quantities, operator);
 
     // Make sure balances match the expected values
@@ -269,9 +268,9 @@ contract('ERC1155Mintable - tests all core 1155 functionality.', (accounts) => {
         await mainContract.setApprovalForAll(user3, false, {from:user2});
     });
 
-    it('safeTransferFrom to reciever contract', async () => {
+    it('safeTransferFrom to receiver contract', async () => {
         await receiverContract.setShouldReject(false);
-        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'));
+        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver');
 
         // ToDo restore state
     });
@@ -296,14 +295,14 @@ contract('ERC1155Mintable - tests all core 1155 functionality.', (accounts) => {
         await expectThrow(mainContract.safeBatchTransferFrom(user1, mainContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1}));
     });
 
-    it('safeBatchTransferFrom throws with invalid reciever contract reply', async () => {
+    it('safeBatchTransferFrom throws with invalid receiver contract reply', async () => {
         await receiverContract.setShouldReject(true);
         await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1}));
     });
 
-    it('safeBatchTransferFrom ok with valid reciever contract reply', async () => {
+    it('safeBatchTransferFrom ok with valid receiver contract reply', async () => {
         await receiverContract.setShouldReject(false);
-        await mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1});
+        await testSafeBatchTransferFrom(user1, user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), 'testSafeBatchTransferFrom receiver');
     });
 
     it('safeBatchTransferFrom from self with enough balance', async () => {
@@ -350,14 +349,14 @@ contract('ERC1155Mintable - tests all core 1155 functionality.', (accounts) => {
         verifySetApproval(tx, user3, user1, false);
     });
 
-    it('balanaceOfBatch - fails on array length mismatch', async () => {
+    it('balanceOfBatch - fails on array length mismatch', async () => {
         let accounts = [ user1 ];
         let ids      = [ hammerId, swordId ];
 
         await expectThrow(mainContract.balanceOfBatch(accounts, ids));
     });
 
-    it('balanaceOfBatch - matches individual balances', async () => {
+    it('balanceOfBatch - matches individual balances', async () => {
         let accounts = [ user1, user1, user1, user2, user2, user2, user3, user3, user3, user4 ];
         let ids      = [ hammerId, swordId, maceId, hammerId, swordId, maceId, hammerId, swordId, maceId, hammerId ];
 

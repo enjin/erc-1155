@@ -29,7 +29,7 @@ interface IERC1155TokenReceiver {
         @param _ids       An array containing ids of each token being transferred
         @param _values    An array containing amounts of each token being transferred
         @param _data      Additional data with no specified format
-        @return           `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`
+        @return           `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`
     */
     function onERC1155BatchReceived(address _operator, address _from, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external returns(bytes4);
 }
