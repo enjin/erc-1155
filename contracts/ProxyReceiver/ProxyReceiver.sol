@@ -68,6 +68,10 @@ contract ProxyReceiver is ProxyBaseStorage, IERC1538 {
     ///        This message is passed to the CommitMessage event.
     function updateContract(address _delegate, string calldata _functionSignatures, string calldata _commitMessage) external {
 
+        // ***
+        // NEEDS SECURITY ADDING HERE, SUGGEST MULTI-ADDRESS APPROVAL SYSTEM OR EQUIVALENT.
+        // ***
+
         // pos is first used to check the size of the delegate contract.
         // After that pos is the current memory location of _functionSignatures.
         // It is used to move through the characters of _functionSignatures

@@ -3,12 +3,15 @@
 
 const expectThrow = require('./helpers/expectThrow');
 
-const ERC1155Mintable = artifacts.require('ERC1155Mintable.sol');
-const ERC1155MockReceiver = artifacts.require('ERC1155MockReceiver.sol');
-const ERC1155ProxyReceiver = artifacts.require('ProxyReceiver.sol');
 const BigNumber = require('bignumber.js');
 
-const SignaturesIERC1155TokenReceiver = "onERC1155Received(address,address,uint256,uint256,bytes)onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)";
+const ERC1155Mintable = artifacts.require('ERC1155Mintable.sol');
+const ERC1155ProxyReceiver = artifacts.require('ProxyReceiver.sol');
+const ERC1155ReceiverDelegate = artifacts.require('ERC1155ReceiverDelegate.sol');
+const ERCXXXXReceiverDelegate = artifacts.require('ERCXXXXReceiverDelegate.sol');
+
+const SignaturesERC1155ReceiverDelegate = "onERC1155Received(address,address,uint256,uint256,bytes)onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)setShouldReject(bool)";
+const SignaturesERCXXXXReceiverDelegate = "onERCXXXXReceived(address,address,uint256,uint256,bytes)onERCXXXXBatchReceived(address,address,uint256[],uint256[],bytes)setShouldRejectXXXX(bool)setShouldRejectClash(bool)";
 
 let user1;
 let user2;
@@ -16,7 +19,8 @@ let user3;
 let user4;
 let mainContract;
 let receiverContract;
-let receiverDelegate;
+let receiverDelegateERC1155;
+let receiverDelegateERCXXXX;
 let tx;
 
 let zeroAddress = '0x0000000000000000000000000000000000000000';
@@ -163,7 +167,8 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
         user4 = accounts[4];
         mainContract = await ERC1155Mintable.new();
         receiverContract = await ERC1155ProxyReceiver.new();
-        receiverDelegate = await ERC1155MockReceiver.new();
+        receiverDelegateERC1155 = await ERC1155ReceiverDelegate.new();
+        receiverDelegateERCXXXX = await ERCXXXXReceiverDelegate.new();
     });
 
     after(async() => {
@@ -230,19 +235,47 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
 
     it('setup proxy wih delegate and try same send', async () => {
 
-        await receiverContract.updateContract(receiverDelegate.address, SignaturesIERC1155TokenReceiver, "Adding in ERC1155MockReceiver delegate");
-        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver');
+        await receiverContract.updateContract(receiverDelegateERC1155.address, SignaturesERC1155ReceiverDelegate, "Adding in ERC1155ReceiverDelegate");
+        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver 1155');
     });
 
     it('remove delegate link and try batchTransfer', async () => {
 
-        await receiverContract.updateContract(zeroAddress, SignaturesIERC1155TokenReceiver, "Removing ERC1155MockReceiver delegate");
+        await receiverContract.updateContract(zeroAddress, SignaturesERC1155ReceiverDelegate, "Invalidating ERC1155ReceiverDelegate delegate");
         await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1}));
     });
 
-    it('restore delegate link and try batchTransfer again', async () => {
+    it('restore delegate link and try batchTransfer again also testing delegate reject', async () => {
 
-        await receiverContract.updateContract(receiverDelegate.address, SignaturesIERC1155TokenReceiver, "Adding in ERC1155MockReceiver delegate again");
-        await testSafeBatchTransferFrom(user1, user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), 'testSafeBatchTransferFrom receiver')
+        await receiverContract.updateContract(receiverDelegateERC1155.address, SignaturesERC1155ReceiverDelegate, "Adding in ERC1155ReceiverDelegate again");
+
+        let proxy1155Delegate = await ERC1155ReceiverDelegate.at(receiverContract.address);
+
+        await proxy1155Delegate.setShouldReject(true);
+        await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1}));
+        await proxy1155Delegate.setShouldReject(false);
+        await testSafeBatchTransferFrom(user1, user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), 'testSafeBatchTransferFrom receiver 1155')
+    });
+
+    it('show how a future delegate can clash with previous delegates data', async () => {
+
+        await receiverContract.updateContract(receiverDelegateERCXXXX.address, SignaturesERCXXXXReceiverDelegate, "Adding in ERCXXXXReceiverDelegate");
+
+        let proxyXXXXDelegate = await ERCXXXXReceiverDelegate.at(receiverContract.address);
+
+        // clashing with 1155 delegate data
+        await proxyXXXXDelegate.setShouldRejectClash(true);
+        await expectThrow(mainContract.safeTransferFrom(user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), {from: user1}));
+        await proxyXXXXDelegate.setShouldRejectClash(false);
+        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver 1155');
+    });
+
+    it('show how a future delegate can set a var that doesnt clash with previous delegates data', async () => {
+
+        let proxyXXXXDelegate = await ERCXXXXReceiverDelegate.at(receiverContract.address);
+
+        // setting var that doesn't clash with 1155 delegate
+        await proxyXXXXDelegate.setShouldRejectXXXX(true);
+        await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver 1155');
     });
 });
