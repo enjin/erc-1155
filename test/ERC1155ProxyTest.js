@@ -1,7 +1,7 @@
 /* global artifacts, contract, it, assert */
 /* eslint-disable prefer-reflect */
 
-const expectThrow = require('./helpers/expectThrow');
+import expectThrow from './helpers/expectThrow';
 
 const BigNumber = require('bignumber.js');
 
@@ -280,6 +280,6 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
     });
 
     it('attempt direct call to a delegate', async () => {
-        await expectThrow(receiverDelegateERC1155.onERC1155Received(zeroAddress, zeroAddress, 0, 0, web3.utils.fromAscii('')));
+        await expectThrow(receiverDelegateERC1155.onERC1155Received(zeroAddress, zeroAddress, 0, 0, web3.utils.fromAscii('')), "Direct call: onERC1155Received");
     });
 });

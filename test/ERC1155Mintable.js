@@ -1,7 +1,7 @@
 /* global artifacts, contract, it, assert */
 /* eslint-disable prefer-reflect */
 
-const expectThrow = require('./helpers/expectThrow');
+import expectThrow from './helpers/expectThrow';
 
 const ERC1155Mintable = artifacts.require('ERC1155Mintable.sol');
 const ERC1155MockReceiver = artifacts.require('ERC1155MockReceiver.sol');
