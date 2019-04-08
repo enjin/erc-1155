@@ -233,7 +233,7 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
         await expectThrow(mainContract.safeTransferFrom(user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), {from: user1}));
     });
 
-    it('setup proxy wih delegate and try same send', async () => {
+    it('setup proxy with delegate and try same send', async () => {
 
         await receiverContract.updateContract(receiverDelegateERC1155.address, SignaturesERC1155ReceiverDelegate, "Adding in ERC1155ReceiverDelegate");
         await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver 1155');
