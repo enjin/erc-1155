@@ -22,6 +22,9 @@ contract ProxyBaseStorage {
     // signature => index+1
     mapping(bytes => uint256) internal funcSignatureToIndex;
 
+    // proxy address of itself, can be used for cross-delegate calls but also safety checking.
+    address proxy;
+
     ///////////////////////////////////////////////////////////////////////////////////////////////
 
 }

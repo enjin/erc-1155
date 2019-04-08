@@ -278,4 +278,8 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
         await proxyXXXXDelegate.setShouldRejectXXXX(true);
         await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver 1155');
     });
+
+    it('attempt direct call to a delegate', async () => {
+        await expectThrow(receiverDelegateERC1155.onERC1155Received(zeroAddress, zeroAddress, 0, 0, web3.utils.fromAscii('')));
+    });
 });

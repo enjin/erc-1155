@@ -28,13 +28,15 @@ contract ProxyReceiver is ProxyBaseStorage, IERC1538 {
 
     constructor() public {
 
+        proxy = address(this);
+
         //Adding ERC1538 updateContract function
         bytes memory signature = "updateContract(address,string,string)";
         bytes4 funcId = bytes4(keccak256(signature));
-        delegates[funcId] = address(this);
+        delegates[funcId] = proxy;
         funcSignatures.push(signature);
         funcSignatureToIndex[signature] = funcSignatures.length;
-        emit FunctionUpdate(funcId, address(0), address(this), string(signature));
+        emit FunctionUpdate(funcId, address(0), proxy, string(signature));
         emit CommitMessage("Added ERC1538 updateContract function at contract creation");
     }
 
