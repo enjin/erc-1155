@@ -67,7 +67,7 @@ contract ERC1155MixedFungible is ERC1155 {
         emit TransferSingle(msg.sender, _from, _to, _id, _value);
 
         if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED);
+            _doSafeTransferAcceptanceCheck(msg.sender, _from, _to, _id, _value, _data);
         }
     }
 
@@ -97,7 +97,7 @@ contract ERC1155MixedFungible is ERC1155 {
         emit TransferBatch(msg.sender, _from, _to, _ids, _values);
 
         if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_BATCH_RECEIVED);
+            _doSafeBatchTransferAcceptanceCheck(msg.sender, _from, _to, _ids, _values, _data);
         }
     }
 

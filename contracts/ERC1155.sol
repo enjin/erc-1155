@@ -11,8 +11,9 @@ contract ERC1155 is IERC1155, ERC165
     using SafeMath for uint256;
     using Address for address;
 
-    bytes4 constant public ERC1155_RECEIVED       = 0xf23a6e61;
-    bytes4 constant public ERC1155_BATCH_RECEIVED = 0xbc197c81;
+    bytes4 constant public ERC1155_REJECTED = 0xafed434d; // keccak256("reject_erc1155_tokens()")
+    bytes4 constant public ERC1155_ACCEPTED = 0x4dc21a2f; // keccak256("accept_erc1155_tokens()")
+    bytes4 constant public ERC1155_BATCH_ACCEPTED = 0xac007889; // keccak256("accept_batch_erc1155_tokens()")
 
     // id => (owner => balance)
     mapping (uint256 => mapping(address => uint256)) internal balances;
@@ -78,7 +79,7 @@ contract ERC1155 is IERC1155, ERC165
         emit TransferSingle(msg.sender, _from, _to, _id, _value);
 
         if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155Received(msg.sender, _from, _id, _value, _data) == ERC1155_RECEIVED, "Receiver contract did not accept the transfer.");
+            _doSafeTransferAcceptanceCheck(msg.sender, _from, _to, _id, _value, _data);
         }
     }
 
@@ -119,7 +120,7 @@ contract ERC1155 is IERC1155, ERC165
         // Now that the balances are updated,
         // call onERC1155BatchReceived if the destination is a contract
         if (_to.isContract()) {
-            require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(msg.sender, _from, _ids, _values, _data) == ERC1155_BATCH_RECEIVED, "Receiver contract did not accept the transfer.");
+            _doSafeBatchTransferAcceptanceCheck(msg.sender, _from, _to, _ids, _values, _data);
         }
     }
 
@@ -175,5 +176,67 @@ contract ERC1155 is IERC1155, ERC165
     */
     function isApprovedForAll(address _owner, address _operator) external view returns (bool) {
         return operatorApproval[_owner][_operator];
+    }
+
+/////////////////////////////////////////// Internal //////////////////////////////////////////////
+
+    function _doSafeTransferAcceptanceCheck(address _operator, address _from, address _to, uint256 _id, uint256 _value, bytes memory _data) internal {
+
+        (bool success, bytes memory returnData) = _to.call(
+            abi.encodeWithSignature(
+                "onERC1155Received(address,address,uint256,uint256,bytes)",
+                _operator,
+                _from,
+                _id,
+                _value,
+                _data
+            )
+        );
+        bytes4 receiverRet = 0x0;
+        if(returnData.length > 0) {
+            assembly {
+                receiverRet := mload(add(returnData, 32))
+            }
+        }
+
+        if (receiverRet == ERC1155_ACCEPTED) {
+            // dest was a receiver and all good, do nothing.
+        } else if (receiverRet == ERC1155_REJECTED) {
+            // dest was a receiver and rejected, revert.
+            revert("Receiver contract did not accept the transfer.");
+        } else {
+            // for whatever reason now, revert.
+            revert("Receiver contract did not accept the transfer for unknown reason.");
+        }
+    }
+
+    function _doSafeBatchTransferAcceptanceCheck(address _operator, address _from, address _to, uint256[] memory _ids, uint256[] memory _values, bytes memory _data) internal {
+
+        (bool success, bytes memory returnData) = _to.call(
+            abi.encodeWithSignature(
+                "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",
+                _operator,
+                _from,
+                _ids,
+                _values,
+                _data
+            )
+        );
+        bytes4 receiverRet = 0x0;
+        if(returnData.length > 0) {
+            assembly {
+                receiverRet := mload(add(returnData, 32))
+            }
+        }
+
+        if (receiverRet == ERC1155_BATCH_ACCEPTED) {
+            // dest was a receiver and all good, do nothing.
+        } else if (receiverRet == ERC1155_REJECTED) {
+            // dest was a receiver and rejected, revert.
+            revert("Receiver contract did not accept the transfer.");
+        } else {
+            // for whatever reason now, revert.
+            revert("Receiver contract did not accept the transfer for unknown reason.");
+        }
     }
 }

@@ -1,10 +1,9 @@
 pragma solidity ^0.5.0;
 
+import "./IERC1155TokenReceiver.sol";
+
 // Contract to test safe transfer behavior.
-contract ERC1155MockReceiver {
-    bytes4 constant public ERC1155_RECEIVED = 0xf23a6e61;
-    bytes4 constant public ERC1155_BATCH_RECEIVED = 0xbc197c81;
-    bytes4 constant public NOT_ERC1155_RECEIVED = 0xa23a6e60; // Some random value
+contract ERC1155MockReceiver is IERC1155TokenReceiver {
 
     // Keep values from last received contract.
     bool public shouldReject;
@@ -26,9 +25,9 @@ contract ERC1155MockReceiver {
         lastValue = _value;
         lastData = _data;
         if (shouldReject == true) {
-            return NOT_ERC1155_RECEIVED;
+            return ERC1155_REJECTED;
         } else {
-            return ERC1155_RECEIVED;
+            return ERC1155_ACCEPTED;
         }
     }
 
@@ -39,9 +38,9 @@ contract ERC1155MockReceiver {
         lastValue = _values[0];
         lastData = _data;
         if (shouldReject == true) {
-            return NOT_ERC1155_RECEIVED;
+            return ERC1155_REJECTED;
         } else {
-            return ERC1155_BATCH_RECEIVED;
+            return ERC1155_BATCH_ACCEPTED;
         }
     }
 }
