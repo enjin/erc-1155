@@ -2,7 +2,6 @@ pragma solidity ^0.5.0;
 
 contract IERC1155TokenReceiver {
 
-    bytes4 constant internal ERC1155_REJECTED = 0xafed434d; // keccak256("reject_erc1155_tokens()")
     bytes4 constant internal ERC1155_ACCEPTED = 0x4dc21a2f; // keccak256("accept_erc1155_tokens()")
     bytes4 constant internal ERC1155_BATCH_ACCEPTED = 0xac007889; // keccak256("accept_batch_erc1155_tokens()")
 
