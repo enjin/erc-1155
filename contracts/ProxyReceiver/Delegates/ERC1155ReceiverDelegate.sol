@@ -24,7 +24,7 @@ contract ERC1155ReceiverDelegate is ProxyReceiverStorage_001_ERC1155MockReceiver
         require(address(this) == proxy, "Direct call: onERC1155Received");
 
         if (shouldReject == true) {
-            return ERC1155_REJECTED;
+            revert("onERC1155Received: transfer not accepted");
         } else {
             return ERC1155_ACCEPTED;
         }
@@ -36,7 +36,7 @@ contract ERC1155ReceiverDelegate is ProxyReceiverStorage_001_ERC1155MockReceiver
         require(address(this) == proxy, "Direct call: onERC1155BatchReceived");
 
         if (shouldReject == true) {
-            return ERC1155_REJECTED;
+            revert("onERC1155BatchReceived: transfer not accepted");
         } else {
             return ERC1155_BATCH_ACCEPTED;
         }

@@ -25,7 +25,7 @@ contract ERC1155MockReceiver is IERC1155TokenReceiver {
         lastValue = _value;
         lastData = _data;
         if (shouldReject == true) {
-            return ERC1155_REJECTED;
+            revert("onERC1155Received: transfer not accepted");
         } else {
             return ERC1155_ACCEPTED;
         }
@@ -38,7 +38,7 @@ contract ERC1155MockReceiver is IERC1155TokenReceiver {
         lastValue = _values[0];
         lastData = _data;
         if (shouldReject == true) {
-            return ERC1155_REJECTED;
+            revert("onERC1155BatchReceived: transfer not accepted");
         } else {
             return ERC1155_BATCH_ACCEPTED;
         }

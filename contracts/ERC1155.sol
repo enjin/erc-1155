@@ -11,7 +11,6 @@ contract ERC1155 is IERC1155, ERC165
     using SafeMath for uint256;
     using Address for address;
 
-    bytes4 constant public ERC1155_REJECTED = 0xafed434d; // keccak256("reject_erc1155_tokens()")
     bytes4 constant public ERC1155_ACCEPTED = 0x4dc21a2f; // keccak256("accept_erc1155_tokens()")
     bytes4 constant public ERC1155_BATCH_ACCEPTED = 0xac007889; // keccak256("accept_batch_erc1155_tokens()")
 
@@ -192,6 +191,7 @@ contract ERC1155 is IERC1155, ERC165
                 _data
             )
         );
+        (success); // ignore warning on unused var
         bytes4 receiverRet = 0x0;
         if(returnData.length > 0) {
             assembly {
@@ -201,12 +201,9 @@ contract ERC1155 is IERC1155, ERC165
 
         if (receiverRet == ERC1155_ACCEPTED) {
             // dest was a receiver and all good, do nothing.
-        } else if (receiverRet == ERC1155_REJECTED) {
+        } else {
             // dest was a receiver and rejected, revert.
             revert("Receiver contract did not accept the transfer.");
-        } else {
-            // for whatever reason now, revert.
-            revert("Receiver contract did not accept the transfer for unknown reason.");
         }
     }
 
@@ -222,6 +219,7 @@ contract ERC1155 is IERC1155, ERC165
                 _data
             )
         );
+        (success); // ignore warning on unused var
         bytes4 receiverRet = 0x0;
         if(returnData.length > 0) {
             assembly {
@@ -231,12 +229,9 @@ contract ERC1155 is IERC1155, ERC165
 
         if (receiverRet == ERC1155_BATCH_ACCEPTED) {
             // dest was a receiver and all good, do nothing.
-        } else if (receiverRet == ERC1155_REJECTED) {
+        } else {
             // dest was a receiver and rejected, revert.
             revert("Receiver contract did not accept the transfer.");
-        } else {
-            // for whatever reason now, revert.
-            revert("Receiver contract did not accept the transfer for unknown reason.");
         }
     }
 }
