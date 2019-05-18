@@ -46,7 +46,7 @@ contract ERC1155MixedFungible is ERC1155 {
         return nfOwners[_id];
     }
 
-    // overide
+    // override
     function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes calldata _data) external {
 
         require(_to != address(0x0), "cannot send to zero address");
@@ -71,7 +71,7 @@ contract ERC1155MixedFungible is ERC1155 {
         }
     }
 
-    // overide
+    // override
     function safeBatchTransferFrom(address _from, address _to, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external {
 
         require(_to != address(0x0), "cannot send to zero address");

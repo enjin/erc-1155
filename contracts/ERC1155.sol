@@ -2,17 +2,15 @@ pragma solidity ^0.5.0;
 
 import "./SafeMath.sol";
 import "./Address.sol";
+import "./Common.sol";
 import "./IERC1155TokenReceiver.sol";
 import "./IERC1155.sol";
 
 // A sample implementation of core ERC1155 function.
-contract ERC1155 is IERC1155, ERC165
+contract ERC1155 is IERC1155, ERC165, CommonConstants
 {
     using SafeMath for uint256;
     using Address for address;
-
-    bytes4 constant public ERC1155_ACCEPTED = 0x4dc21a2f; // keccak256("accept_erc1155_tokens()")
-    bytes4 constant public ERC1155_BATCH_ACCEPTED = 0xac007889; // keccak256("accept_batch_erc1155_tokens()")
 
     // id => (owner => balance)
     mapping (uint256 => mapping(address => uint256)) internal balances;
@@ -52,18 +50,18 @@ contract ERC1155 is IERC1155, ERC165
 /////////////////////////////////////////// ERC1155 //////////////////////////////////////////////
 
     /**
-        @notice Transfers value amount of an _id from the _from address to the _to addresses specified. Each parameter array should be the same length, with each index correlating.
-        @dev MUST emit TransferSingle event on success.
-        Caller must be approved to manage the _from account's tokens (see isApprovedForAll).
-        MUST Throw if `_to` is the zero address.
-        MUST Throw if `_id` is not a valid token ID.
-        MUST Throw on any other error.
-        When transfer is complete, this function MUST check if `_to` is a smart contract (code size > 0). If so, it MUST call `onERC1155Received` on `_to` and revert if the return value is not `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`.
-        @param _from    Source addresses
-        @param _to      Target addresses
+        @notice Transfers `_value` amount of an `_id` from the `_from` address to the `_to` address specified (with safety call).
+        @dev Caller must be approved to manage the tokens being transferred out of the `_from` account (see "Approval" section of the standard).
+        MUST revert if `_to` is the zero address.
+        MUST revert if balance of holder for token `_id` is lower than the `_value` sent.
+        MUST revert on any other error.
+        MUST emit the `TransferSingle` event to reflect the balance change (see "Safe Transfer Rules" section of the standard).
+        After the above conditions are met, this function MUST check if `_to` is a smart contract (e.g. code size > 0). If so, it MUST call `onERC1155Received` on `_to` and act appropriately (see "Safe Transfer Rules" section of the standard).
+        @param _from    Source address
+        @param _to      Target address
         @param _id      ID of the token type
         @param _value   Transfer amount
-        @param _data    Additional data with no specified format, sent in call to `_to`
+        @param _data    Additional data with no specified format, MUST be sent unaltered in call to `onERC1155Received` on `_to`
     */
     function safeTransferFrom(address _from, address _to, uint256 _id, uint256 _value, bytes calldata _data) external {
 
@@ -83,18 +81,20 @@ contract ERC1155 is IERC1155, ERC165
     }
 
     /**
-        @notice Send multiple types of Tokens from a 3rd party in one transfer (with safety call).
-        @dev MUST emit TransferBatch event on success.
-        Caller must be approved to manage the _from account's tokens (see isApprovedForAll).
-        MUST Throw if `_to` is the zero address.
-        MUST Throw if any of the `_ids` is not a valid token ID.
-        MUST Throw on any other error.
-        When transfer is complete, this function MUST check if `_to` is a smart contract (code size > 0). If so, it MUST call `onERC1155BatchReceived` on `_to` and revert if the return value is not `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))`.
+        @notice Transfers `_values` amount(s) of `_ids` from the `_from` address to the `_to` address specified (with safety call).
+        @dev Caller must be approved to manage the tokens being transferred out of the `_from` account (see "Approval" section of the standard).
+        MUST revert if `_to` is the zero address.
+        MUST revert if length of `_ids` is not the same as length of `_values`.
+        MUST revert if any of the balance(s) of the holder(s) for token(s) in `_ids` is lower than the respective amount(s) in `_values` sent to the recipient.
+        MUST revert on any other error.
+        MUST emit `TransferSingle` or `TransferBatch` event(s) such that all the balance changes are reflected (see "Safe Transfer Rules" section of the standard).
+        Balance changes and events MUST follow the ordering of the arrays (_ids[0]/_values[0] before _ids[1]/_values[1], etc).
+        After the above conditions for the transfer(s) in the batch are met, this function MUST check if `_to` is a smart contract (e.g. code size > 0). If so, it MUST call the relevant `ERC1155TokenReceiver` hook(s) on `_to` and act appropriately (see "Safe Transfer Rules" section of the standard).
         @param _from    Source address
         @param _to      Target address
-        @param _ids     IDs of each token type
-        @param _values  Transfer amounts per token type
-        @param _data    Additional data with no specified format, sent in call to `_to`
+        @param _ids     IDs of each token type (order and length must match _values array)
+        @param _values  Transfer amounts per token type (order and length must match _ids array)
+        @param _data    Additional data with no specified format, MUST be sent unaltered in call to the `ERC1155TokenReceiver` hook(s) on `_to`
     */
     function safeBatchTransferFrom(address _from, address _to, uint256[] calldata _ids, uint256[] calldata _values, bytes calldata _data) external {
 
@@ -141,7 +141,7 @@ contract ERC1155 is IERC1155, ERC165
         @notice Get the balance of multiple account/token pairs
         @param _owners The addresses of the token holders
         @param _ids    ID of the Tokens
-        @return        The _owner's balance of the Token types requested
+        @return        The _owner's balance of the Token types requested (i.e. balance for each (owner, id) pair)
      */
     function balanceOfBatch(address[] calldata _owners, uint256[] calldata _ids) external view returns (uint256[] memory) {
 
