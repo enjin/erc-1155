@@ -71,7 +71,7 @@ contract AllowanceWrapper is IERC1155, ERC165
         Caller must have sufficient allowance by _from for the _id/_value pair, or isApprovedForAll must be true.
         Throws if `_to` is the zero address.
         Throws if `_id` is not a valid token ID.
-        When transfer is complete, this function checks if `_to` is a smart contract (code size > 0). If so, it calls `onERC1155Received` on `_to` and throws if the return value is not `bytes4(keccak256("onERC1155Received(address,address,uint256,uint256,bytes)"))`.
+        Once allowance is checked the target contract's safeTransferFrom function is called.
         @param _from    source addresses
         @param _to      target addresses
         @param _id      ID of the Token
@@ -90,6 +90,7 @@ contract AllowanceWrapper is IERC1155, ERC165
         @dev MUST emit Transfer event per id on success.
         Caller must have a sufficient allowance by _from for each of the id/value pairs.
         Throws on any error rather than return a false flag to minimize user errors.
+        Once allowances are checked the target contract's safeBatchTransferFrom function is called.
         @param _from    Source address
         @param _to      Target address
         @param _ids     Types of Tokens

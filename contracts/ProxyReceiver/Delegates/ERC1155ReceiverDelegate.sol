@@ -1,6 +1,7 @@
 pragma solidity ^0.5.0;
 
 import "./DelegatesStorage.sol";
+import "../../Common.sol";
 import "../../IERC1155TokenReceiver.sol";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -10,7 +11,7 @@ import "../../IERC1155TokenReceiver.sol";
  */
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-contract ERC1155ReceiverDelegate is ProxyReceiverStorage_001_ERC1155MockReceiver, IERC1155TokenReceiver {
+contract ERC1155ReceiverDelegate is ProxyReceiverStorage_001_ERC1155MockReceiver, IERC1155TokenReceiver, CommonConstants {
 
     function setShouldReject(bool _value) external {
         require(address(this) == proxy, "Direct call: setShouldReject");
@@ -40,5 +41,9 @@ contract ERC1155ReceiverDelegate is ProxyReceiverStorage_001_ERC1155MockReceiver
         } else {
             return ERC1155_BATCH_ACCEPTED;
         }
+    }
+
+    function isERC1155TokenReceiver() external view returns (bytes4) {
+        return 0x0d912442; // bytes4(keccak256("isERC1155TokenReceiver()"))
     }
 }
