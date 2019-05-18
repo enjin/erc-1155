@@ -73,8 +73,11 @@ contract ERC1155 is IERC1155, ERC165, CommonConstants
         balances[_id][_from] = balances[_id][_from].sub(_value);
         balances[_id][_to]   = _value.add(balances[_id][_to]);
 
+        // MUST emit event
         emit TransferSingle(msg.sender, _from, _to, _id, _value);
 
+        // Now that the balance is updated and the event was emitted,
+        // call onERC1155Received if the destination is a contract.
         if (_to.isContract()) {
             _doSafeTransferAcceptanceCheck(msg.sender, _from, _to, _id, _value, _data);
         }
@@ -113,11 +116,16 @@ contract ERC1155 is IERC1155, ERC165, CommonConstants
             balances[id][_to]   = value.add(balances[id][_to]);
         }
 
+        // Note: instead of the below batch versions of event and acceptance check you MAY have emitted a TransferSingle
+        // event and a subsequent call to _doSafeTransferAcceptanceCheck in above loop for each balance change instead.
+        // Or emitted a TransferSingle event for each in the loop and then the single _doSafeBatchTransferAcceptanceCheck below.
+        // However it is implemented the balance changes and events MUST match when a check (i.e. calling an external contract) is done.
+
         // MUST emit event
         emit TransferBatch(msg.sender, _from, _to, _ids, _values);
 
-        // Now that the balances are updated,
-        // call onERC1155BatchReceived if the destination is a contract
+        // Now that the balances are updated and the events are emitted,
+        // call onERC1155BatchReceived if the destination is a contract.
         if (_to.isContract()) {
             _doSafeBatchTransferAcceptanceCheck(msg.sender, _from, _to, _ids, _values, _data);
         }
