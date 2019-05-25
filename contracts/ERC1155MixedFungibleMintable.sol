@@ -48,6 +48,7 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
 
         // Index are 1-based.
         uint256 index = maxIndex[_type] + 1;
+        maxIndex[_type] = _to.length.add(maxIndex[_type]);
 
         for (uint256 i = 0; i < _to.length; ++i) {
             address dst = _to[i];
@@ -64,8 +65,6 @@ contract ERC1155MixedFungibleMintable is ERC1155MixedFungible {
                 _doSafeTransferAcceptanceCheck(msg.sender, msg.sender, dst, id, 1, '');
             }
         }
-
-        maxIndex[_type] = _to.length.add(maxIndex[_type]);
     }
 
     function mintFungible(uint256 _id, address[] calldata _to, uint256[] calldata _quantities) external creatorOnly(_id) {
