@@ -189,57 +189,15 @@ contract ERC1155 is IERC1155, ERC165, CommonConstants
 
     function _doSafeTransferAcceptanceCheck(address _operator, address _from, address _to, uint256 _id, uint256 _value, bytes memory _data) internal {
 
-        (bool success, bytes memory returnData) = _to.call(
-            abi.encodeWithSignature(
-                "onERC1155Received(address,address,uint256,uint256,bytes)",
-                _operator,
-                _from,
-                _id,
-                _value,
-                _data
-            )
-        );
-        (success); // ignore warning on unused var
-        bytes4 receiverRet = 0x0;
-        if(returnData.length > 0) {
-            assembly {
-                receiverRet := mload(add(returnData, 32))
-            }
-        }
-
-        if (receiverRet == ERC1155_ACCEPTED) {
-            // dest was a receiver and all good, do nothing.
-        } else {
-            // dest was a receiver and rejected, revert.
-            revert("Receiver contract did not accept the transfer.");
-        }
+        // Note: if the below reverts in the onERC1155Received function of the _to address you will have an undefined revert reason returned rather than the one in the require test.
+        // If you want predictable revert reasons consider using low level _to.call() style instead so the revert does not bubble up and you can revert yourself on the ERC1155_ACCEPTED test.
+        require(IERC1155TokenReceiver(_to).onERC1155Received(_operator, _from, _id, _value, _data) == ERC1155_ACCEPTED, "contract returned an unknown value from onERC1155Received");
     }
 
     function _doSafeBatchTransferAcceptanceCheck(address _operator, address _from, address _to, uint256[] memory _ids, uint256[] memory _values, bytes memory _data) internal {
 
-        (bool success, bytes memory returnData) = _to.call(
-            abi.encodeWithSignature(
-                "onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)",
-                _operator,
-                _from,
-                _ids,
-                _values,
-                _data
-            )
-        );
-        (success); // ignore warning on unused var
-        bytes4 receiverRet = 0x0;
-        if(returnData.length > 0) {
-            assembly {
-                receiverRet := mload(add(returnData, 32))
-            }
-        }
-
-        if (receiverRet == ERC1155_BATCH_ACCEPTED) {
-            // dest was a receiver and all good, do nothing.
-        } else {
-            // dest was a receiver and rejected, revert.
-            revert("Receiver contract did not accept the transfer.");
-        }
+        // Note: if the below reverts in the onERC1155BatchReceived function of the _to address you will have an undefined revert reason returned rather than the one in the require test.
+        // If you want predictable revert reasons consider using low level _to.call() style instead so the revert does not bubble up and you can revert yourself on the ERC1155_BATCH_ACCEPTED test.
+        require(IERC1155TokenReceiver(_to).onERC1155BatchReceived(_operator, _from, _ids, _values, _data) == ERC1155_BATCH_ACCEPTED, "contract returned an unknown value from onERC1155BatchReceived");
     }
 }
