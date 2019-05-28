@@ -252,7 +252,7 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
         let proxy1155Delegate = await ERC1155ReceiverDelegate.at(receiverContract.address);
 
         await proxy1155Delegate.setShouldReject(true);
-        await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1}), "Receiver contract did not accept the transfer.");
+        await expectThrow(mainContract.safeBatchTransferFrom(user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), {from: user1}), "onERC1155BatchReceived: transfer not accepted");
         await proxy1155Delegate.setShouldReject(false);
         await testSafeBatchTransferFrom(user1, user1, receiverContract.address, idSet, quantities, web3.utils.fromAscii(''), 'testSafeBatchTransferFrom receiver 1155')
     });
@@ -265,7 +265,7 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
 
         // clashing with 1155 delegate data
         await proxyXXXXDelegate.setShouldRejectClash(true);
-        await expectThrow(mainContract.safeTransferFrom(user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), {from: user1}), "Receiver contract did not accept the transfer.");
+        await expectThrow(mainContract.safeTransferFrom(user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), {from: user1}), "onERC1155Received: transfer not accepted");
         await proxyXXXXDelegate.setShouldRejectClash(false);
         await testSafeTransferFrom(user1, user1, receiverContract.address, hammerId, 1, web3.utils.fromAscii('SomethingMeaningfull'), 'testSafeTransferFrom receiver 1155');
     });
