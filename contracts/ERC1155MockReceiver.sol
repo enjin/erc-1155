@@ -4,7 +4,7 @@ import "./Common.sol";
 import "./IERC1155TokenReceiver.sol";
 
 // Contract to test safe transfer behavior.
-contract ERC1155MockReceiver is IERC1155TokenReceiver, CommonConstants {
+contract ERC1155MockReceiver is ERC1155TokenReceiver, CommonConstants {
 
     // Keep values from last received contract.
     bool public shouldReject;
@@ -45,7 +45,9 @@ contract ERC1155MockReceiver is IERC1155TokenReceiver, CommonConstants {
         }
     }
 
-    function isERC1155TokenReceiver() external view returns (bytes4) {
-        return 0x0d912442; // bytes4(keccak256("isERC1155TokenReceiver()"))
+    // ERC165 interface support
+    function supportsInterface(bytes4 interfaceID) external view returns (bool) {
+        return  interfaceID == 0x01ffc9a7 ||    // ERC165
+                interfaceID == 0x4e2312e0;      // ERC1155_ACCEPTED ^ ERC1155_BATCH_ACCEPTED;
     }
 }
