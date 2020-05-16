@@ -103,7 +103,7 @@ contract ERC1155 is IERC1155, ERC165, CommonConstants
 
         // MUST Throw on errors
         require(_to != address(0x0), "destination address must be non-zero.");
-        require(_ids.length == _values.length, "_ids and _values array lenght must match.");
+        require(_ids.length == _values.length, "_ids and _values array length must match.");
         require(_from == msg.sender || operatorApproval[_from][msg.sender] == true, "Need operator approval for 3rd party transfers.");
 
         for (uint256 i = 0; i < _ids.length; ++i) {
