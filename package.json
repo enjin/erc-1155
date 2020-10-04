@@ -13,10 +13,11 @@
   "devDependencies": {
     "@babel/core": "^7.4.0",
     "@babel/preset-env": "^7.4.2",
-    "@babel/register": "^7.4.0"
+    "@babel/register": "^7.4.0",
+    "truffle": "^5.1.47"
   },
   "scripts": {
-    "test": "truffle test"
+    "test": "npx truffle test"
   },
   "repository": {
     "type": "git",
