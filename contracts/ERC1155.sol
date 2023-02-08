@@ -140,7 +140,7 @@ contract ERC1155 is IERC1155, ERC165, CommonConstants
     function balanceOf(address _owner, uint256 _id) external view returns (uint256) {
         // The balance of any account can be calculated from the Transfer events history.
         // However, since we need to keep the balances to validate transfer request,
-        // there is no extra cost to also privide a querry function.
+        // there is no extra cost to also provide a query function.
         return balances[_id][_owner];
     }
 
