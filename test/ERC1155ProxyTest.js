@@ -211,7 +211,7 @@ contract('ERC1155ProxyTest - tests sending 1155 items to an ERC1538 supported pr
 
         // This is implementation-specific,
         // but we choose to add an URI on creation.
-        // Make sure the URI event is emited correctly.
+        // Make sure the URI event is emitted correctly.
         verifyURI(tx, hammerUri, hammerId);
 
         let swordQuantity = 200;

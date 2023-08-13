@@ -201,7 +201,7 @@ contract('ERC1155Mintable - tests all core 1155 functionality.', (accounts) => {
 
         // This is implementation-specific,
         // but we choose to add an URI on creation.
-        // Make sure the URI event is emited correctly.
+        // Make sure the URI event is emitted correctly.
         verifyURI(tx, hammerUri, hammerId);
 
         let swordQuantity = 200;
@@ -275,7 +275,7 @@ contract('ERC1155Mintable - tests all core 1155 functionality.', (accounts) => {
         // ToDo restore state
     });
 
-    it('safeBatchTransferFrom throws with insuficient balance', async () => {
+    it('safeBatchTransferFrom throws with insufficient balance', async () => {
         await expectThrow(mainContract.safeBatchTransferFrom(user2, user1, idSet, quantities, web3.utils.fromAscii(''), {from: user2}));
     });
 
@@ -368,7 +368,7 @@ contract('ERC1155Mintable - tests all core 1155 functionality.', (accounts) => {
         }
     });
 
-    it('ERC1165 - returns false on non-supported insterface', async () => {
+    it('ERC1165 - returns false on non-supported interface', async () => {
         let someRandomInterface = '0xd9b67a25';
         assert(await mainContract.supportsInterface(someRandomInterface) === false);
     });
